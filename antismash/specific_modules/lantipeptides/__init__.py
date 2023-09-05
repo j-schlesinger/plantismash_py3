@@ -23,18 +23,25 @@ name = "lantipeptides"
 
 # The tuple is the name of the binary and whether it is an optional requirement
 _required_binaries = [
-        ('hmmpfam2', False),
-    ]
+    ("hmmpfam2", False),
+]
 
 
 short_description = name.capitalize()
+
 
 def check_prereqs():
     failure_messages = []
     for binary_name, optional in _required_binaries:
         if utils.locate_executable(binary_name) is None and not optional:
-            failure_messages.append("Failed to locate executable for %r" %
-                                    binary_name)
+            failure_messages.append("Failed to locate executable for %r" % binary_name)
     return failure_messages
 
-__all__ = [ check_prereqs, specific_analysis, generate_sidepanel, generate_details_div, will_handle ]
+
+__all__ = [
+    check_prereqs,
+    specific_analysis,
+    generate_sidepanel,
+    generate_details_div,
+    will_handle,
+]

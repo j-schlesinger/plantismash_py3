@@ -24,6 +24,7 @@ from helperlibs.bio import seqio
 from antismash.utils import execute
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
+
 def run_prodigal(seq_record, options):
     "Run progidal to annotate prokaryotic sequences"
     if "prodigal" in options:
@@ -34,28 +35,28 @@ def run_prodigal(seq_record, options):
     with TemporaryDirectory(change=True):
         utils.fix_record_name_id(seq_record, options)
         name = seq_record.id
-        while len(name) > 0 and name[0] == '-':
+        while len(name) > 0 and name[0] == "-":
             name = name[1:]
         if name == "":
             name = "unknown"
-        fasta_file = '%s.fasta' % name
-        result_file = '%s.predict' % name
-        with open(fasta_file, 'w') as handle:
-            seqio.write([seq_record], handle, 'fasta')
+        fasta_file = "%s.fasta" % name
+        result_file = "%s.predict" % name
+        with open(fasta_file, "w") as handle:
+            seqio.write([seq_record], handle, "fasta")
 
         # run prodigal
-        prodigal = [path.join(basedir, 'prodigal')]
-        prodigal.extend(['-i', fasta_file, '-f', 'sco', '-o', result_file])
+        prodigal = [path.join(basedir, "prodigal")]
+        prodigal.extend(["-i", fasta_file, "-f", "sco", "-o", result_file])
         if options.genefinding == "prodigal-m" or len(seq_record.seq) < 20000:
-            prodigal.extend(['-p', 'meta'])
+            prodigal.extend(["-p", "meta"])
 
         out, err, retcode = execute(prodigal)
-        if err.find('Error') > -1:
+        if err.find("Error") > -1:
             logging.error("Failed to run prodigal: %r" % err)
             return
-        for line in open(result_file, 'r'):
+        for line in open(result_file, "r"):
             # skip first line
-            if not line.startswith('>'):
+            if not line.startswith(">"):
                 continue
             name, start, end, prodigalStrand = line[1:].rstrip().split("_")
 
@@ -67,7 +68,7 @@ def run_prodigal(seq_record, options):
                 else:
                     strand = -1
             except ValueError:
-                logging.error('Malformatted prodigal output line %r' % line.rstrip())
+                logging.error("Malformatted prodigal output line %r" % line.rstrip())
                 continue
 
             if start > end:
@@ -75,8 +76,12 @@ def run_prodigal(seq_record, options):
                 tmp = start
                 start = end
                 end = tmp
-            
-            loc = FeatureLocation(start-1, end, strand=strand)
-            feature = SeqFeature(location=loc, id=name, type="CDS",
-                        qualifiers={'locus_tag': ['ctg%s_%s' % (options.record_idx, name)]})
+
+            loc = FeatureLocation(start - 1, end, strand=strand)
+            feature = SeqFeature(
+                location=loc,
+                id=name,
+                type="CDS",
+                qualifiers={"locus_tag": ["ctg%s_%s" % (options.record_idx, name)]},
+            )
             seq_record.features.append(feature)

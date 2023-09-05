@@ -27,23 +27,22 @@ priority = 10000
 
 
 # Tuple is ( binary_name, optional)
-_required_binaries = [
-    ('hmmscan', False)
-]
+_required_binaries = [("hmmscan", False)]
 
 _required_files = [
-    ('Pfam-A.hmm', False),
-    ('Pfam-A.hmm.h3f', False),
-    ('Pfam-A.hmm.h3i', False),
-    ('Pfam-A.hmm.h3m', False),
-    ('Pfam-A.hmm.h3p', False)
+    ("Pfam-A.hmm", False),
+    ("Pfam-A.hmm.h3f", False),
+    ("Pfam-A.hmm.h3i", False),
+    ("Pfam-A.hmm.h3m", False),
+    ("Pfam-A.hmm.h3p", False),
 ]
+
 
 def check_prereqs(options):
     "Check if all required applications are around"
-    
-    if 'pfamdir' not in options:
-        options.pfamdir = utils.get_full_path(__file__, '')
+
+    if "pfamdir" not in options:
+        options.pfamdir = utils.get_full_path(__file__, "")
 
     failure_messages = []
     for binary_name, optional in _required_binaries:
@@ -51,24 +50,29 @@ def check_prereqs(options):
             failure_messages.append("Failed to locate file: %r" % binary_name)
 
     for file_name, optional in _required_files:
-        if utils.locate_file(path.join(options.pfamdir, file_name)) is None and not optional:
+        if (
+            utils.locate_file(path.join(options.pfamdir, file_name)) is None
+            and not optional
+        ):
             failure_messages.append("Failed to locate file: %r" % file_name)
 
     return failure_messages
 
+
 def run(seq_record, options):
     "run hmmsearch against PFAM for all CDS features"
-    if 'pfamdir' not in options:
-        options.pfamdir = utils.get_full_path(__file__, '')
+    if "pfamdir" not in options:
+        options.pfamdir = utils.get_full_path(__file__, "")
 
     query_sequence = utils.get_multifasta(seq_record)
 
-    target_hmmfile = path.join(options.pfamdir, 'Pfam-A.hmm')
+    target_hmmfile = path.join(options.pfamdir, "Pfam-A.hmm")
 
-    logging.info('Running whole-genome pfam search')
+    logging.info("Running whole-genome pfam search")
     results = utils.run_hmmscan(target_hmmfile, query_sequence)
 
     _annotate(seq_record, options, results)
+
 
 def _annotate(seq_record, options, results):
     "Annotate seq_record with CDS_motifs for the result"
@@ -77,61 +81,75 @@ def _annotate(seq_record, options, results):
     max_evalue = _max_evalue(options)
 
     feature_by_id = utils.get_feature_dict(seq_record)
-    
+
     for r in results:
         i = 1
         for hsp in r.hsps:
             if hsp.bitscore <= min_score or hsp.evalue >= max_evalue:
                 continue
 
-            if not feature_by_id.has_key(hsp.query_id):
+            if hsp.query_id not in feature_by_id:
                 continue
 
             feature = feature_by_id[hsp.query_id]
 
             start, end = _calculate_start_end(feature, hsp)
             loc = FeatureLocation(start, end, strand=feature.strand)
-            
-            newFeature = SeqFeature(location=loc, type=options.FeatureTags.fullhmmer_tag)
-            
+
+            newFeature = SeqFeature(
+                location=loc, type=options.FeatureTags.fullhmmer_tag
+            )
+
             quals = defaultdict(list)
-            
-            quals['label'].append(r.id)
-            if feature.qualifiers.has_key('locus_tag'):       
-                quals['locus_tag'] = feature.qualifiers['locus_tag']
+
+            quals["label"].append(r.id)
+            if "locus_tag" in feature.qualifiers:
+                quals["locus_tag"] = feature.qualifiers["locus_tag"]
             else:
-                quals['locus_tag'] = [hsp.query_id]
-            quals['domain'] = [hsp.hit_id]
-            quals['asDomain_id'] = ['fullhmmer_'+'_'.join(quals['locus_tag'])+'_'+'{:04d}'.format(i)]
+                quals["locus_tag"] = [hsp.query_id]
+            quals["domain"] = [hsp.hit_id]
+            quals["asDomain_id"] = [
+                "fullhmmer_" + "_".join(quals["locus_tag"]) + "_" + "{:04d}".format(i)
+            ]
             i += 1
-            
-            quals['evalue'] = [str("{:.2E}".format(float(hsp.evalue)))]
-            quals['score'] = [str(hsp.bitscore)]
-            quals['aSTool'] = ["fullhmmer"]
-            quals['detection'] = ["hmmscan"]
-            quals['database'] = [path.basename(r.target)]
-            if feature.qualifiers.has_key('transl_table'):
-                [transl_table] = feature.qualifiers['transl_table']
+
+            quals["evalue"] = [str("{:.2E}".format(float(hsp.evalue)))]
+            quals["score"] = [str(hsp.bitscore)]
+            quals["aSTool"] = ["fullhmmer"]
+            quals["detection"] = ["hmmscan"]
+            quals["database"] = [path.basename(r.target)]
+            if "transl_table" in feature.qualifiers:
+                [transl_table] = feature.qualifiers["transl_table"]
             else:
                 transl_table = 1
-            quals['translation'] = [str(newFeature.extract(seq_record.seq).translate(table=transl_table))]
+            quals["translation"] = [
+                str(newFeature.extract(seq_record.seq).translate(table=transl_table))
+            ]
 
-            quals['note'].append("%s-Hit: %s. Score: %s. E-value: %s. Domain range: %s..%s." % \
-                    (path.basename(r.target), hsp.hit_id, hsp.bitscore, hsp.evalue,
-                     hsp.hit_start, hsp.hit_end))
+            quals["note"].append(
+                "%s-Hit: %s. Score: %s. E-value: %s. Domain range: %s..%s."
+                % (
+                    path.basename(r.target),
+                    hsp.hit_id,
+                    hsp.bitscore,
+                    hsp.evalue,
+                    hsp.hit_start,
+                    hsp.hit_end,
+                )
+            )
 
-            quals['description'] = [hsp.hit_description]
+            quals["description"] = [hsp.hit_description]
 
             try:
                 pfamid = name_to_pfamid[hsp.hit_id]
-                if quals.has_key('db_xref'):
-                    quals['db_xref'].append("PFAM: %s" % pfamid)
+                if "db_xref" in quals:
+                    quals["db_xref"].append("PFAM: %s" % pfamid)
                 else:
-                    quals['db_xref'] = ["PFAM: %s" % pfamid]    
+                    quals["db_xref"] = ["PFAM: %s" % pfamid]
             except KeyError:
                 pass
-            
-            newFeature.qualifiers=quals
+
+            newFeature.qualifiers = quals
             seq_record.features.append(newFeature)
 
 
@@ -146,6 +164,7 @@ def _calculate_start_end(feature, result):
 
     return start, end
 
+
 def _min_score(options):
     "Load the minimal score from the configuration or set a default"
     try:
@@ -154,6 +173,7 @@ def _min_score(options):
         score = 0
 
     return score
+
 
 def _max_evalue(options):
     "Load the maximal evalue from the configuration or set a default"

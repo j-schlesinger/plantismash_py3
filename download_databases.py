@@ -15,7 +15,7 @@
 
 """Script to download and install Pfam and ClusterBlast databases"""
 
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import tarfile
 import gzip
 import backports.lzma as lzma
@@ -29,12 +29,18 @@ from os import path
 
 PFAM_URL = "ftp://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam27.0/Pfam-A.hmm.gz"
 PFAM_CHECKSUM = "b29bc2c54db8090531df0361a781b8d7397f60ebedc0c36a16e7d45e999cc329"
-CLUSTERBLAST_URL = "https://bitbucket.org/antismash/antismash/downloads/clusterblast_dmnd07.tar.xz"
-CLUSTERBLAST_CHECKSUM = "0b4911ee3e30bc2fbe00b85fdd100ec7389c835c22527586d7b93ab661a0a57b"
+CLUSTERBLAST_URL = (
+    "https://bitbucket.org/antismash/antismash/downloads/clusterblast_dmnd07.tar.xz"
+)
+CLUSTERBLAST_CHECKSUM = (
+    "0b4911ee3e30bc2fbe00b85fdd100ec7389c835c22527586d7b93ab661a0a57b"
+)
 
-if sys.platform == ('win32') or sys.platform == ('darwin'):
-    os.environ['EXEC'] = os.getcwd() + "\exec"
-    os.environ['PATH'] = os.pathsep + os.environ['EXEC'] + os.pathsep + os.environ['PATH']
+if sys.platform == ("win32") or sys.platform == ("darwin"):
+    os.environ["EXEC"] = os.getcwd() + "\exec"
+    os.environ["PATH"] = (
+        os.pathsep + os.environ["EXEC"] + os.pathsep + os.environ["PATH"]
+    )
 
 
 # pylint: disable=redefined-builtin
@@ -46,56 +52,69 @@ def execute(commands, input=None):
     else:
         stdin_redir = None
 
-    proc = subprocess.Popen(commands, stdin=stdin_redir,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
+    proc = subprocess.Popen(
+        commands, stdin=stdin_redir, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     out, err = proc.communicate(input=input)
     retcode = proc.returncode
     return out, err, retcode
+
+
 # pylint: enable=redefined-builtin
 
 
 def get_remote_filesize(url):
     try:
-        usock = urllib2.urlopen(url)
-        dbfilesize = usock.info().get('Content-Length')
+        usock = urllib.request.urlopen(url)
+        dbfilesize = usock.info().get("Content-Length")
         if dbfilesize is None:
             dbfilesize = 0
-    except urllib2.URLError:
+    except urllib.error.URLError:
         dbfilesize = 0
     dbfilesize = float(int(dbfilesize))  # db file size in bytes
     return dbfilesize
 
 
 def get_free_space(folder):
-    """ Return folder/drive free space (in bytes)"""
-    if platform.system() == 'Windows':
+    """Return folder/drive free space (in bytes)"""
+    if platform.system() == "Windows":
         free_bytes = ctypes.c_ulonglong(0)
-        ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(folder), None, None, ctypes.pointer(free_bytes))
+        ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+            ctypes.c_wchar_p(folder), None, None, ctypes.pointer(free_bytes)
+        )
         return free_bytes.value
     else:
         return os.statvfs(folder).f_bfree * os.statvfs(folder).f_frsize
 
 
 def check_diskspace(file_url):
-    """ Check if sufficient disk space is available"""
+    """Check if sufficient disk space is available"""
     dbfilesize = int(get_remote_filesize(file_url))
     free_space = int(get_free_space("."))
     if free_space < dbfilesize:
-        print 'ERROR: Insufficient disk space available (required: %d, free: %d).' % (dbfilesize, free_space)
+        print(
+            (
+                "ERROR: Insufficient disk space available (required: %d, free: %d)."
+                % (dbfilesize, free_space)
+            )
+        )
         sys.exit()
 
 
 def download_file(url, filename):
-    """ Download a file"""
-    print "Downloading large file %s. Please be patient..." % (path.basename(filename))
+    """Download a file"""
+    print(
+        ("Downloading large file %s. Please be patient..." % (path.basename(filename)))
+    )
     try:
-        req = urllib2.urlopen(url)
-    except urllib2.URLError:
-        print 'ERROR: File not found on server.\nPlease check your internet connection.'
+        req = urllib.request.urlopen(url)
+    except urllib.error.URLError:
+        print(
+            "ERROR: File not found on server.\nPlease check your internet connection."
+        )
         sys.exit()
     CHUNK = 128 * 1024
-    with open(filename, 'wb') as fp:
+    with open(filename, "wb") as fp:
         while True:
             try:
                 chunk = req.read(CHUNK)
@@ -103,18 +122,18 @@ def download_file(url, filename):
                     break
                 fp.write(chunk)
             except IOError:
-                print 'ERROR: Download interrupted.'
+                print("ERROR: Download interrupted.")
                 sys.exit()
-    #Report download success
-    print "Downloading %s finished successfully." % (path.basename(filename))
+    # Report download success
+    print(("Downloading %s finished successfully." % (path.basename(filename))))
     return filename
 
 
-def checksum(filename, chunksize=2 ** 20):
+def checksum(filename, chunksize=2**20):
     """Get the SHA256 checksum of a file"""
     sha = hashlib.sha256()
-    with open(filename, 'rb') as fh:
-        for chunk in iter(lambda: fh.read(chunksize), b''):
+    with open(filename, "rb") as fh:
+        for chunk in iter(lambda: fh.read(chunksize), b""):
             sha.update(chunk)
 
     return sha.hexdigest()
@@ -124,9 +143,9 @@ def unzip_file(filename, decompressor, error_type):
     """Decompress a compressed file"""
     newfilename, _ = path.splitext(filename)
     try:
-        zipfile = decompressor.open(filename, 'rb')
+        zipfile = decompressor.open(filename, "rb")
         chunksize = 128 * 1024
-        with open(newfilename, 'wb') as fp:
+        with open(newfilename, "wb") as fp:
             while True:
                 try:
                     chunk = zipfile.read(chunksize)
@@ -134,30 +153,42 @@ def unzip_file(filename, decompressor, error_type):
                         break
                     fp.write(chunk)
                 except IOError:
-                    print 'ERROR: Unzipping interrupted.'
+                    print("ERROR: Unzipping interrupted.")
                     sys.exit()
     except error_type:
-        print "ERROR: Error extracting %s. Please try to extract it manually." % (path.basename(filename))
+        print(
+            (
+                "ERROR: Error extracting %s. Please try to extract it manually."
+                % (path.basename(filename))
+            )
+        )
         return
-    print "Extraction of %s finished successfully." % (path.basename(filename))
+    print(("Extraction of %s finished successfully." % (path.basename(filename))))
     return newfilename
 
 
 def untar_file(filename):
-    """ Extract a TAR/GZ file"""
+    """Extract a TAR/GZ file"""
     try:
         tar = tarfile.open(filename)
         tar.extractall(path=filename.rpartition(os.sep)[0])
         tar.close()
     except tarfile.ReadError:
-        print "ERROR: Error extracting %s. Please try to extract it manually." % (filename.rpartition(os.sep)[2])
+        print(
+            (
+                "ERROR: Error extracting %s. Please try to extract it manually."
+                % (filename.rpartition(os.sep)[2])
+            )
+        )
         return
-    print "Extraction of %s finished successfully." % (filename.rpartition(os.sep)[2])
+    print(
+        ("Extraction of %s finished successfully." % (filename.rpartition(os.sep)[2]))
+    )
 
 
 def compile_pfam(filename):
-    """ Compile a HMMer database with hmmpress"""
-    command = ['hmmpress', '-f', filename]
+    """Compile a HMMer database with hmmpress"""
+    command = ["hmmpress", "-f", filename]
     execute(command)
 
 
@@ -171,37 +202,51 @@ def delete_file(filename):
 def download_if_not_present(url, filename, sha256sum):
     """Download a file if it's not present or checksum doesn't match"""
     if path.exists(filename):
-        print "Creating checksum of %s" % path.basename(filename)
+        print(("Creating checksum of %s" % path.basename(filename)))
         csum = checksum(filename)
         if csum == sha256sum:
             return
         else:
-            print "checksum mismatch: expected %s, got %s" % (sha256sum, csum)
+            print(("checksum mismatch: expected %s, got %s" % (sha256sum, csum)))
 
     download_file(url, filename)
 
-    print "Creating checksum of %s" % path.basename(filename)
+    print(("Creating checksum of %s" % path.basename(filename)))
     csum = checksum(filename)
     if csum != sha256sum:
-        print "Error downloading %s, sha256sum mismatch. Expected %s, got %s." % \
-              (filename, sha256sum, csum)
+        print(
+            (
+                "Error downloading %s, sha256sum mismatch. Expected %s, got %s."
+                % (filename, sha256sum, csum)
+            )
+        )
         sys.exit(1)
 
 
 def main():
-    #Download and compile PFAM database
+    # Download and compile PFAM database
     check_diskspace(PFAM_URL)
-    filename = path.join(os.getcwd(), "antismash", "generic_modules", "fullhmmer",
-                         PFAM_URL.rpartition('/')[2])
+    filename = path.join(
+        os.getcwd(),
+        "antismash",
+        "generic_modules",
+        "fullhmmer",
+        PFAM_URL.rpartition("/")[2],
+    )
     download_if_not_present(PFAM_URL, filename, PFAM_CHECKSUM)
     filename = unzip_file(filename, gzip, gzip.zlib.error)
     compile_pfam(filename)
     delete_file(filename + ".gz")
 
-    #Download and compile ClusterBlast database
+    # Download and compile ClusterBlast database
     check_diskspace(CLUSTERBLAST_URL)
-    filename = path.join(os.getcwd(), "antismash", "generic_modules", "clusterblast",
-                         CLUSTERBLAST_URL.rpartition('/')[2])
+    filename = path.join(
+        os.getcwd(),
+        "antismash",
+        "generic_modules",
+        "clusterblast",
+        CLUSTERBLAST_URL.rpartition("/")[2],
+    )
     download_if_not_present(CLUSTERBLAST_URL, filename, CLUSTERBLAST_CHECKSUM)
     filename = unzip_file(filename, lzma, lzma.LZMAError)
     untar_file(filename)
@@ -210,12 +255,17 @@ def main():
 
     # hmmpress the NRPS/PKS specific databases
     compile_pfam(path.join("antismash", "specific_modules", "nrpspks", "abmotifs.hmm"))
-    compile_pfam(path.join("antismash", "specific_modules", "nrpspks", "dockingdomains.hmm"))
+    compile_pfam(
+        path.join("antismash", "specific_modules", "nrpspks", "dockingdomains.hmm")
+    )
     compile_pfam(path.join("antismash", "specific_modules", "nrpspks", "ksdomains.hmm"))
-    compile_pfam(path.join("antismash", "specific_modules", "nrpspks", "nrpspksdomains.hmm"))
+    compile_pfam(
+        path.join("antismash", "specific_modules", "nrpspks", "nrpspksdomains.hmm")
+    )
 
     # hmmpress the smcog specific database
     compile_pfam(path.join("antismash", "generic_modules", "smcogs", "smcogs.hmm"))
+
 
 if __name__ == "__main__":
     main()

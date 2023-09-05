@@ -8,7 +8,7 @@
 
 """Compare detected clusters against prepared (GEO) Expression data"""
 
-from __future__ import division
+
 import logging
 import json
 import re
@@ -27,8 +27,7 @@ name = "coexpress"
 short_description = name.capitalize()
 priority = 10000
 
-_required_binaries = [
-]
+_required_binaries = []
 
 
 def check_prereqs(options):
@@ -47,19 +46,22 @@ def run_coexpress(seq_record, all_gene_expressions, geo):
 
     gene_expressions = all_gene_expressions[seq_record.id]
 
-    logging.info('Running CoExpress analysis on the clusters..')
+    logging.info("Running CoExpress analysis on the clusters..")
     for cluster in cl_list:
-        logging.debug('Running CoExpress analysis on record "%s".. (Cluster %s of %s)' % (geo["info"]["id"], cl_count, len(cl_list)))
+        logging.debug(
+            'Running CoExpress analysis on record "%s".. (Cluster %s of %s)'
+            % (geo["info"]["id"], cl_count, len(cl_list))
+        )
         features = utils.get_cluster_cds_features(cluster, seq_record)
         cl_count += 1
         cluster_genes = {}
 
         for feature in features:
-            gene_id =  utils.get_gene_id(feature)
+            gene_id = utils.get_gene_id(feature)
             if gene_id in gene_expressions:
                 cluster_genes[gene_id] = gene_expressions[gene_id]
 
-        #calculate correlation value between genes
+        # calculate correlation value between genes
         for gene_1 in cluster_genes:
             if "cor" not in cluster_genes[gene_1]:
                 cluster_genes[gene_1]["cor"] = {}
@@ -74,11 +76,13 @@ def run_coexpress(seq_record, all_gene_expressions, geo):
                     continue
                 if gene_1 in cluster_genes[gene_2]["cor"]:
                     continue
-                cor_val = calc_correlation_value(cluster_genes[gene_1], cluster_genes[gene_2])
+                cor_val = calc_correlation_value(
+                    cluster_genes[gene_1], cluster_genes[gene_2]
+                )
                 cluster_genes[gene_1]["cor"][gene_2] = cor_val
                 cluster_genes[gene_2]["cor"][gene_1] = cor_val
 
-        #calculate distance value for building dendogram
+        # calculate distance value for building dendogram
         for gene_1 in cluster_genes:
             if "dist" not in cluster_genes[gene_1]:
                 cluster_genes[gene_1]["dist"] = {}
@@ -86,7 +90,10 @@ def run_coexpress(seq_record, all_gene_expressions, geo):
                 if "dist" not in cluster_genes[gene_2]:
                     cluster_genes[gene_2]["dist"] = {}
                 dist = 100.0
-                if "cor" in cluster_genes[gene_1] and gene_2 in cluster_genes[gene_1]["cor"]:
+                if (
+                    "cor" in cluster_genes[gene_1]
+                    and gene_2 in cluster_genes[gene_1]["cor"]
+                ):
                     cor_val = min(1.00, cluster_genes[gene_1]["cor"][gene_2])
                     dist = 100.0 * (1.0 - cor_val)
                 cluster_genes[gene_1]["dist"][gene_2] = dist
@@ -97,13 +104,20 @@ def run_coexpress(seq_record, all_gene_expressions, geo):
             for seqid in all_gene_expressions:
                 prefix = "%s:" % seqid.replace(":", "_")
                 for gene_2 in all_gene_expressions[seqid]:
-                    if (prefix + gene_2) not in options.hmm_results: # only add biosynthetic remote genes
+                    if (
+                        prefix + gene_2
+                    ) not in options.hmm_results:  # only add biosynthetic remote genes
                         continue
                     if gene_2 == gene_1:
                         continue
                     if gene_2 in cluster_genes:
                         continue
-                    cor_val = min(1.00, calc_correlation_value(cluster_genes[gene_1], all_gene_expressions[seqid][gene_2]))
+                    cor_val = min(
+                        1.00,
+                        calc_correlation_value(
+                            cluster_genes[gene_1], all_gene_expressions[seqid][gene_2]
+                        ),
+                    )
                     if 1.00 > cor_val >= 0.9:
                         cluster_genes[gene_1]["dist"][gene_2] = 100.0 * (1.0 - cor_val)
 
@@ -130,7 +144,9 @@ def run_coexpress(seq_record, all_gene_expressions, geo):
             for gene_1 in cluster_genes:
                 if (prefix + gene_1) in options.hmm_results:
                     for gene_2 in cluster_genes[gene_1]["dist"]:
-                        if (gene_2 not in cluster_genes) and (gene_2 not in have_connections):
+                        if (gene_2 not in cluster_genes) and (
+                            gene_2 not in have_connections
+                        ):
                             have_connections.append(gene_2)
             for gene_1 in cluster_genes:
                 new_dists = {}
@@ -139,22 +155,29 @@ def run_coexpress(seq_record, all_gene_expressions, geo):
                         new_dists[gene_2] = cluster_genes[gene_1]["dist"][gene_2]
                 cluster_genes[gene_1]["dist"] = new_dists
 
-        #update seq_record
+        # update seq_record
         update_features(features, cluster_genes, geo)
 
-    if False: #This feature is temporarily disabled, saved for next version #options.coexpress_signal_cluster_size < len(overlaps):
-        logging.info('Running expression signal analysis on seq_record..')
-        signals = [];
+    if (
+        False
+    ):  # This feature is temporarily disabled, saved for next version #options.coexpress_signal_cluster_size < len(overlaps):
+        logging.info("Running expression signal analysis on seq_record..")
+        signals = []
         n = options.coexpress_signal_cluster_size - 1
-        #build list of cluster locations (for annotating signal regions)
+        # build list of cluster locations (for annotating signal regions)
         clrefs = []
         for cluster in cl_list:
-            clrefs.append(((cluster.location.start, cluster.location.end), utils.get_cluster_number(cluster)))
+            clrefs.append(
+                (
+                    (cluster.location.start, cluster.location.end),
+                    utils.get_cluster_number(cluster),
+                )
+            )
         clrefs = sorted(clrefs, key=lambda cl: cl[0][0])
-        #build signals
-        for i in xrange(0, len(overlaps) - n):
+        # build signals
+        for i in range(0, len(overlaps) - n):
             genes = []
-            for overlap in overlaps[i:i+n]:
+            for overlap in overlaps[i : i + n]:
                 gene = overlap[0]
                 for feature in overlap:
                     if utils.get_gene_id(feature) in gene_expressions:
@@ -164,17 +187,19 @@ def run_coexpress(seq_record, all_gene_expressions, geo):
             cors = []
             checked = []
             hits = []
-            for x in xrange(0, len(genes)):
+            for x in range(0, len(genes)):
                 gene_x = utils.get_gene_id(genes[x])
                 if prefix + gene_x in options.hmm_results:
                     hits.append(options.hmm_results[prefix + gene_x][0].query_id)
-                for y in xrange(0, len(genes)):
-                    if ((x,y) in checked) or ((y,x) in checked):
+                for y in range(0, len(genes)):
+                    if ((x, y) in checked) or ((y, x) in checked):
                         continue
                     cor_val = 0
                     gene_y = utils.get_gene_id(genes[y])
                     if (gene_x in gene_expressions) and (gene_y in gene_expressions):
-                        cor_val = calc_correlation_value(gene_expressions[gene_x], gene_expressions[gene_y])
+                        cor_val = calc_correlation_value(
+                            gene_expressions[gene_x], gene_expressions[gene_y]
+                        )
                     cors.append(cor_val)
                     checked.append((x, y))
             sloc = (genes[0].location.start + genes[-1].location.end) / 2
@@ -202,7 +227,7 @@ def update_dist_between_clusters(seq_records, all_gene_expressions, geo):
     for seq_record in seq_records:
         gene_expressions = all_gene_expressions[seq_record.id]
         for feature in utils.get_withincluster_cds_features(seq_record):
-            gene_id =  utils.get_gene_id(feature)
+            gene_id = utils.get_gene_id(feature)
             if gene_id in gene_expressions:
                 cluster_genes[gene_id] = gene_expressions[gene_id]
 
@@ -210,19 +235,30 @@ def update_dist_between_clusters(seq_records, all_gene_expressions, geo):
         for gene_2 in cluster_genes:
             if gene_2 == gene_1:
                 continue
-            if (gene_1 in cluster_genes[gene_2]["dist"]) or (gene_2 in cluster_genes[gene_1]["dist"]):
-                if (gene_1 not in cluster_genes[gene_2]["dist"]):
-                    cluster_genes[gene_2]["dist"][gene_1] = cluster_genes[gene_1]["dist"][gene_2]
-                if (gene_2 not in cluster_genes[gene_1]["dist"]):
-                    cluster_genes[gene_1]["dist"][gene_2] = cluster_genes[gene_2]["dist"][gene_1]
+            if (gene_1 in cluster_genes[gene_2]["dist"]) or (
+                gene_2 in cluster_genes[gene_1]["dist"]
+            ):
+                if gene_1 not in cluster_genes[gene_2]["dist"]:
+                    cluster_genes[gene_2]["dist"][gene_1] = cluster_genes[gene_1][
+                        "dist"
+                    ][gene_2]
+                if gene_2 not in cluster_genes[gene_1]["dist"]:
+                    cluster_genes[gene_1]["dist"][gene_2] = cluster_genes[gene_2][
+                        "dist"
+                    ][gene_1]
                 continue
-            cor_val = min(1.00, calc_correlation_value(cluster_genes[gene_1], cluster_genes[gene_2]))
+            cor_val = min(
+                1.00,
+                calc_correlation_value(cluster_genes[gene_1], cluster_genes[gene_2]),
+            )
             if 1.00 > cor_val >= 0.9:
                 cluster_genes[gene_1]["dist"][gene_2] = 100.0 * (1.0 - cor_val)
                 cluster_genes[gene_2]["dist"][gene_1] = 100.0 * (1.0 - cor_val)
 
     for seq_record in seq_records:
-        update_features(utils.get_withincluster_cds_features(seq_record), cluster_genes, geo)
+        update_features(
+            utils.get_withincluster_cds_features(seq_record), cluster_genes, geo
+        )
 
 
 def update_features(features, cluster_genes, geo):
@@ -240,12 +276,19 @@ def update_features(features, cluster_genes, geo):
             else:
                 feature.qualifiers["geo"] = []
             geo_str = "Record: %s;%s(%s);%s;%s" % (
-                    geo["info"]["id"],
-                    cg["ref"],
-                    cg["evalue"],
-                    ",".join(["%s=%s(%.2f)" % (sample, 0, cg["exp"][sample]) for sample in cg["exp"]]),
-                    ",".join(["%s=%.2f" % (gene_2, cg["dist"][gene_2]) for gene_2 in cg["dist"]])
-                    )
+                geo["info"]["id"],
+                cg["ref"],
+                cg["evalue"],
+                ",".join(
+                    [
+                        "%s=%s(%.2f)" % (sample, 0, cg["exp"][sample])
+                        for sample in cg["exp"]
+                    ]
+                ),
+                ",".join(
+                    ["%s=%.2f" % (gene_2, cg["dist"][gene_2]) for gene_2 in cg["dist"]]
+                ),
+            )
             feature.qualifiers["geo"].append(geo_str)
 
 
@@ -266,12 +309,12 @@ def parse_geofile(geo_path):
         pstate = ""
         sstate = None
         temp_table_header = []
-        for line in iter(geo_file.readline, ''):
+        for line in iter(geo_file.readline, ""):
             line = line.lstrip().rstrip()
             if line.startswith("^"):
                 # is a header line
                 ss = line.split("=")
-                if (len(ss) < 2):
+                if len(ss) < 2:
                     ss.append("")
                 left = ss[0][1:].rstrip().upper()
                 right = ss[1].lstrip()
@@ -292,30 +335,30 @@ def parse_geofile(geo_path):
             elif line.startswith("!"):
                 # is an attribute line
                 ss = line.split("=")
-                if (len(ss) < 2):
+                if len(ss) < 2:
                     ss.append("")
                 left = ss[0][1:].rstrip().upper()
                 right = ss[1].lstrip()
                 temp_table_header = []
-                if (pstate == "DATASET"):
+                if pstate == "DATASET":
                     if left == "DATASET_TITLE":
                         dataset_info["title"] = right
                     elif left == "DATASET_DESCRIPTION":
                         dataset_info["desc"] = right
                     elif left == "DATASET_TABLE_BEGIN":
                         pstate = "parsing_table"
-                elif (pstate == "SERIES"):
+                elif pstate == "SERIES":
                     if left == "SERIES_TITLE":
                         dataset_info["title"] = right
                     elif left == "SERIES_SUMMARY":
                         dataset_info["desc"] = right
-                elif (pstate == "PLATFORM"):
+                elif pstate == "PLATFORM":
                     if left == "PLATFORM_TABLE_BEGIN":
                         pstate = "parsing_table"
-                elif (pstate == "SAMPLE"):
+                elif pstate == "SAMPLE":
                     if left == "SAMPLE_TABLE_BEGIN":
                         pstate = "parsing_table"
-                elif (pstate == "SUBSET"):
+                elif pstate == "SUBSET":
                     if left == "SUBSET_SAMPLE_ID":
                         for sample_id in right.split(","):
                             sample_id = get_safe_sample_name(sample_id.upper())
@@ -363,14 +406,24 @@ def parse_geofile(geo_path):
             if val != None:
                 if get_safe_sample_name(col) in dataset_info["samples"]:
                     values[get_safe_sample_name(col)] = float(val)
-                elif col in ["GB_ACC", "PT_ACC", "SP_ACC", "ORF", "GI", "GENBANK ACCESSION", "PLATFORM_CLONEID", "PLATFORM_ORF", "PLATFORM_SPOTID"]:
+                elif col in [
+                    "GB_ACC",
+                    "PT_ACC",
+                    "SP_ACC",
+                    "ORF",
+                    "GI",
+                    "GENBANK ACCESSION",
+                    "PLATFORM_CLONEID",
+                    "PLATFORM_ORF",
+                    "PLATFORM_SPOTID",
+                ]:
                     val = val.upper()
                     if len(val) > 0 and val not in identifiers:
                         identifiers.append(val)
         dataset_data[id_ref] = (identifiers, values)
         del temp_data[id_ref]
 
-    return {"info" : dataset_info, "data" : dataset_data}
+    return {"info": dataset_info, "data": dataset_data}
 
 
 def calc_sample_ranges(geo_dataset):
@@ -379,10 +432,14 @@ def calc_sample_ranges(geo_dataset):
     for sample in geo_dataset["info"]["samples"]:
         expressions = []
         for id_ref in geo_dataset["data"]:
-            if sample in geo_dataset["data"][id_ref][1].keys():
+            if sample in list(geo_dataset["data"][id_ref][1].keys()):
                 expressions.append(geo_dataset["data"][id_ref][1][sample])
         expressions = np.array(expressions)
-        geo_dataset["info"]["ranges"][sample] = (np.percentile(expressions, 10), np.percentile(expressions, 50), np.percentile(expressions, 90))
+        geo_dataset["info"]["ranges"][sample] = (
+            np.percentile(expressions, 10),
+            np.percentile(expressions, 50),
+            np.percentile(expressions, 90),
+        )
 
 
 def parse_csvfiles(csv_paths):
@@ -393,38 +450,51 @@ def parse_csvfiles(csv_paths):
 
 
 def parse_csv_file(csv_path):
-    header=[]
-    dataset_data={}
-    dataset_info = {"id": get_safe_sample_name(path.basename(csv_path).strip(".csv")), "title": "", "samples": [], "desc": "", "type": "CSV"}
+    header = []
+    dataset_data = {}
+    dataset_info = {
+        "id": get_safe_sample_name(path.basename(csv_path).strip(".csv")),
+        "title": "",
+        "samples": [],
+        "desc": "",
+        "type": "CSV",
+    }
     with open(csv_path) as f:
         skip_cols = []
         for line in f:
-            if line.startswith('#'):
-                if line.startswith('#title:'):
-                    dataset_info['title']=line[8:].rstrip()
-                if line.startswith('#desc:'):
-                    dataset_info['desc']=line[7:].rstrip()
+            if line.startswith("#"):
+                if line.startswith("#title:"):
+                    dataset_info["title"] = line[8:].rstrip()
+                if line.startswith("#desc:"):
+                    dataset_info["desc"] = line[7:].rstrip()
             else:
-                Bline=re.split(',',line.rstrip())
+                Bline = re.split(",", line.rstrip())
                 if not header:
-                    header=Bline
+                    header = Bline
                 else:
-                    cur_id=Bline[0]
-                    dataset_data[cur_id]=[]
+                    cur_id = Bline[0]
+                    dataset_data[cur_id] = []
                     dataset_data[cur_id].append([cur_id])
                     dataset_data[cur_id].append({})
-                    for i,exp in enumerate(Bline):
+                    for i, exp in enumerate(Bline):
                         if (i is not 0) and (i not in skip_cols):
-                            if exp=='': exp=0
-                            if exp=='NA': exp=float('nan')
+                            if exp == "":
+                                exp = 0
+                            if exp == "NA":
+                                exp = float("nan")
                             else:
                                 try:
-                                    exp=float(exp)
+                                    exp = float(exp)
                                 except ValueError:
-                                    logging.warning("Incorrectly formatted CSV file (%s)! column '%d: %s' contains non-numeric values and will be skipped." % (dataset_info["id"], i, header[i]))
+                                    logging.warning(
+                                        "Incorrectly formatted CSV file (%s)! column '%d: %s' contains non-numeric values and will be skipped."
+                                        % (dataset_info["id"], i, header[i])
+                                    )
                                     skip_cols.append(i)
                                     continue
-                            dataset_data[cur_id][1][get_safe_sample_name(header[i])]=exp
+                            dataset_data[cur_id][1][
+                                get_safe_sample_name(header[i])
+                            ] = exp
 
         for i in skip_cols:
             skipped_col = get_safe_sample_name(header[i])
@@ -432,13 +502,13 @@ def parse_csv_file(csv_path):
                 if skipped_col in dataset_data[cur_id][1]:
                     del dataset_data[cur_id][1][skipped_col]
         temp_header = []
-        for i in xrange(0, len(header)):
+        for i in range(0, len(header)):
             if i not in skip_cols:
                 temp_header.append(header[i])
         header = temp_header
     if len(header) > 1:
         dataset_info["samples"] = [get_safe_sample_name(h) for h in header[1:]]
-    return {"info" : dataset_info, "data" : dataset_data}
+    return {"info": dataset_info, "data": dataset_data}
 
 
 def match_exp_to_genes(features, geo_dataset):
@@ -450,8 +520,8 @@ def match_exp_to_genes(features, geo_dataset):
     gene_to_ref = {}
     col_gene_id = geo_info["col_id"]
     if col_gene_id < 0:
-        return {} # gene_id columns not found
-    for id_ref, data in geo_data.items():
+        return {}  # gene_id columns not found
+    for id_ref, data in list(geo_data.items()):
         gene_to_ref[data[0][col_gene_id].upper()] = id_ref
 
     # fill cluster_genes
@@ -462,12 +532,12 @@ def match_exp_to_genes(features, geo_dataset):
             cluster_genes[gene_id]["ref"] = gene_to_ref[gene_id.upper()]
             cluster_genes[gene_id]["evalue"] = float(-1)
 
-    #calculate scaled value for each hits
+    # calculate scaled value for each hits
     for gene_id in cluster_genes:
         cg = cluster_genes[gene_id]
         if "ref" in cg:
             cg["exp"] = {}
-            for sample, value in geo_data[cg["ref"]][1].items():
+            for sample, value in list(geo_data[cg["ref"]][1].items()):
                 cg["exp"][sample] = value
 
     return cluster_genes
@@ -484,7 +554,7 @@ def calc_correlation_value(gene_1, gene_2):
             set_sample.append(s)
     if len(set_sample) < 1:
         return 0
-    #using Pearson correlation coefficient
+    # using Pearson correlation coefficient
     Xi = []
     Yi = []
     for s in set_sample:
@@ -494,30 +564,37 @@ def calc_correlation_value(gene_1, gene_2):
             val_1 = gene_1["exp"][s]
         if s in gene_2["exp"]:
             val_2 = gene_2["exp"][s]
-        if (val_1 != None and val_2 != None):
+        if val_1 != None and val_2 != None:
             Xi.append(val_1)
             Yi.append(val_2)
 
     # MAD filter
-    if options.coexpress_min_MAD == '': # Default case, geo_min_MAD is an empty string => filter out genes with 0 MAD.
+    if (
+        options.coexpress_min_MAD == ""
+    ):  # Default case, geo_min_MAD is an empty string => filter out genes with 0 MAD.
         if (calc_MAD(Xi) == 0) or (calc_MAD(Yi) == 0):
             return 0
-    else: # Filter out genes with MAD below specified min.
-        if (calc_MAD(Xi) < float(options.coexpress_min_MAD)) or (calc_MAD(Yi) < float(options.coexpress_min_MAD)):
+    else:  # Filter out genes with MAD below specified min.
+        if (calc_MAD(Xi) < float(options.coexpress_min_MAD)) or (
+            calc_MAD(Yi) < float(options.coexpress_min_MAD)
+        ):
             return 0
 
-    cor_val = (((len(set_sample) * sum([x**2 for x in Xi])) - (sum(Xi)**2)) ** 0.5)
-    cor_val *= (((len(set_sample) * sum([y**2 for y in Yi])) - (sum(Yi)**2)) ** 0.5)
+    cor_val = ((len(set_sample) * sum([x**2 for x in Xi])) - (sum(Xi) ** 2)) ** 0.5
+    cor_val *= ((len(set_sample) * sum([y**2 for y in Yi])) - (sum(Yi) ** 2)) ** 0.5
     if cor_val != 0:
-        cor_val = ((len(set_sample) * sum([Xi[i]*Yi[i] for i in xrange(0, len(set_sample))])) - (sum(Xi) * sum(Yi))) / cor_val
+        cor_val = (
+            (len(set_sample) * sum([Xi[i] * Yi[i] for i in range(0, len(set_sample))]))
+            - (sum(Xi) * sum(Yi))
+        ) / cor_val
     return cor_val
 
 
 def calc_MAD(x):
-    """ MAD = median( | Xi - median(X) |  ) """
-    med=np.median(x)
-    x2=np.absolute(x-med)
-    MAD=np.median(x2)
+    """MAD = median( | Xi - median(X) |  )"""
+    med = np.median(x)
+    x2 = np.absolute(x - med)
+    MAD = np.median(x2)
     return MAD
 
 
@@ -525,8 +602,8 @@ def find_col_id(geo_dataset, seq_records):
     if geo_dataset["info"]["type"] == "CSV":
         geo_dataset["info"]["col_id"] = 0
         return geo_dataset
-    for id_ref, data in geo_dataset["data"].items():
-        for i in xrange(0, len(data[0])):
+    for id_ref, data in list(geo_dataset["data"].items()):
+        for i in range(0, len(data[0])):
             for seq_record in seq_records:
                 for feature in utils.get_cds_features(seq_record):
                     gene_id = utils.get_gene_id(feature)
@@ -544,121 +621,160 @@ def update_g(cur_gene1, interactions, distances, full_g):
         score = distances[cur_gene2]
         score = (100 - score) / 100
 
-        #For good scores, add an edge to full_g
+        # For good scores, add an edge to full_g
         if score >= 0.9:
-            full_g.add_edge(cur_gene1, cur_gene2, weight = score)
+            full_g.add_edge(cur_gene1, cur_gene2, weight=score)
 
 
 def get_inter_cluster_relation(seq_records, geo_id):
     logging.debug('Calculating inter cluster relations on geo_record "%s"..' % (geo_id))
-    data=[]
-    full_g=nx.Graph()
-    cluster_genes={}
-    bio_genes=set()
-    cur_cluster1=0
+    data = []
+    full_g = nx.Graph()
+    cluster_genes = {}
+    bio_genes = set()
+    cur_cluster1 = 0
     # First, inspect all cluster to get cluster_genes
     for record in seq_records:
         for cluster in utils.get_cluster_features(record):
-            cur_cluster1+=1
-            cluster_genes[cur_cluster1]=set()
+            cur_cluster1 += 1
+            cluster_genes[cur_cluster1] = set()
 
-            for cluster_gene in utils.get_cluster_cds_features(cluster,record):
+            for cluster_gene in utils.get_cluster_cds_features(cluster, record):
                 # We only care about cluster_genes that have a geo match
                 for cluster_gene_geo in utils.parse_geo_feature(cluster_gene):
                     # We only care about data from the current geo_id
-                    if cluster_gene_geo['rec_id']==geo_id:
-                        cur_gene1=utils.get_gene_id(cluster_gene)
-                        cur_gene1_distances=cluster_gene_geo['dist']
-                        cur_gene1_neighbors=set(cur_gene1_distances)
+                    if cluster_gene_geo["rec_id"] == geo_id:
+                        cur_gene1 = utils.get_gene_id(cluster_gene)
+                        cur_gene1_distances = cluster_gene_geo["dist"]
+                        cur_gene1_neighbors = set(cur_gene1_distances)
 
                         # Add each gene to cluster_genes, and to the full_g(raph) and to bio_genes
                         cluster_genes[cur_cluster1].add(cur_gene1)
                         full_g.add_node(cur_gene1)
-                        if 'sec_met' in cluster_gene.qualifiers:
+                        if "sec_met" in cluster_gene.qualifiers:
                             bio_genes.add(cur_gene1)
 
                         # Get intra-cluster edges
-                        interactions=cur_gene1_neighbors.intersection(cluster_genes[cur_cluster1])
-                        update_g(cur_gene1,interactions,cur_gene1_distances,full_g)
+                        interactions = cur_gene1_neighbors.intersection(
+                            cluster_genes[cur_cluster1]
+                        )
+                        update_g(cur_gene1, interactions, cur_gene1_distances, full_g)
 
                         # From the second cluster onwards, we'll add inter-cluster edges backwards, i.e.: 2-1, 3-1, 3-2, 4-1, 4-2, etc...
                         if cur_cluster1 is not 1:
                             for cur_cluster2 in cluster_genes:
                                 if cur_cluster1 is not cur_cluster2:
-                                    interactions=cur_gene1_neighbors.intersection(cluster_genes[cur_cluster2])
-                                    update_g(cur_gene1,interactions,cur_gene1_distances,full_g)
+                                    interactions = cur_gene1_neighbors.intersection(
+                                        cluster_genes[cur_cluster2]
+                                    )
+                                    update_g(
+                                        cur_gene1,
+                                        interactions,
+                                        cur_gene1_distances,
+                                        full_g,
+                                    )
 
     # Remove single nodes
     for node in full_g.nodes():
-        if full_g.degree(node)==0:
+        if full_g.degree(node) == 0:
             full_g.remove_node(node)
 
     # Get communities
-    community_dict  =community.best_partition(full_g)
+    community_dict = community.best_partition(full_g)
 
-    number_of_clusters  =len(cluster_genes)
+    number_of_clusters = len(cluster_genes)
 
     # Now check inter-cluster interactions
-    for i in range(1,number_of_clusters+1):
-        cluster1    =cluster_genes[i]
+    for i in range(1, number_of_clusters + 1):
+        cluster1 = cluster_genes[i]
 
-        for j in range(i+1,number_of_clusters+1):
-            cluster2    =cluster_genes[j]
-            cluster3    =cluster1.union(cluster2)
+        for j in range(i + 1, number_of_clusters + 1):
+            cluster2 = cluster_genes[j]
+            cluster3 = cluster1.union(cluster2)
 
-            cluster_pair_g =full_g.subgraph(cluster3)
+            cluster_pair_g = full_g.subgraph(cluster3)
 
-            communities_present =np.unique([community_dict[n] for n in cluster3 if n in community_dict])
+            communities_present = np.unique(
+                [community_dict[n] for n in cluster3 if n in community_dict]
+            )
 
             # CRITERIA 1 = only intra-community edges
             for cur_community in communities_present:
-                cur_community_nodes =[n for n in cluster3 if n in community_dict and community_dict[n]==cur_community]
-                cur_community_g =cluster_pair_g.subgraph(cur_community_nodes)
+                cur_community_nodes = [
+                    n
+                    for n in cluster3
+                    if n in community_dict and community_dict[n] == cur_community
+                ]
+                cur_community_g = cluster_pair_g.subgraph(cur_community_nodes)
 
-                decomposed_g=list(nx.connected_component_subgraphs(cur_community_g))
+                decomposed_g = list(nx.connected_component_subgraphs(cur_community_g))
                 for cur_g in decomposed_g:
                     # CRITERIA 2 = no isolates. anything with a clustering_coefficient=0 will be pruned out.
-                    clustering_coefficient  =nx.clustering(cur_g)
+                    clustering_coefficient = nx.clustering(cur_g)
 
-                    pred_nodes  =[n for n in clustering_coefficient if clustering_coefficient[n]>0]
-                    pred_g      =cur_g.subgraph(pred_nodes)
-                    pred_edges  =pred_g.edges()
+                    pred_nodes = [
+                        n
+                        for n in clustering_coefficient
+                        if clustering_coefficient[n] > 0
+                    ]
+                    pred_g = cur_g.subgraph(pred_nodes)
+                    pred_edges = pred_g.edges()
 
-                    prediction  =set(pred_g.nodes())
-                    prediction_cluster1 =prediction.intersection(cluster1)
-                    prediction_cluster2 =prediction.intersection(cluster2)
+                    prediction = set(pred_g.nodes())
+                    prediction_cluster1 = prediction.intersection(cluster1)
+                    prediction_cluster2 = prediction.intersection(cluster2)
 
-                    bio_prediction  =prediction.intersection(bio_genes)
-                    bio_prediction_cluster1 =prediction_cluster1.intersection(bio_genes)
-                    bio_prediction_cluster2 =prediction_cluster2.intersection(bio_genes)
+                    bio_prediction = prediction.intersection(bio_genes)
+                    bio_prediction_cluster1 = prediction_cluster1.intersection(
+                        bio_genes
+                    )
+                    bio_prediction_cluster2 = prediction_cluster2.intersection(
+                        bio_genes
+                    )
 
-                    #CRITERIA 3 = at least 2 genes per cluster
-                    #CRITERIA 5 = at least 1 bio per cluster
-                    #CRITERIA 4 = at least 3 bio
-                    if (    len(prediction_cluster1)        >=2 and
-                            len(prediction_cluster2)        >=2 and
-                            len(bio_prediction_cluster1)    >=1 and
-                            len(bio_prediction_cluster2)    >=1 and
-                            len(bio_prediction)             >=3
-                            ):
+                    # CRITERIA 3 = at least 2 genes per cluster
+                    # CRITERIA 5 = at least 1 bio per cluster
+                    # CRITERIA 4 = at least 3 bio
+                    if (
+                        len(prediction_cluster1) >= 2
+                        and len(prediction_cluster2) >= 2
+                        and len(bio_prediction_cluster1) >= 1
+                        and len(bio_prediction_cluster2) >= 1
+                        and len(bio_prediction) >= 3
+                    ):
+                        pred_edges1 = [
+                            n
+                            for n in pred_edges
+                            if n[0] in cluster1 and n[1] in cluster1
+                        ]
+                        pred_edges2 = [
+                            n
+                            for n in pred_edges
+                            if n[0] in cluster2 and n[1] in cluster2
+                        ]
 
-                            pred_edges1    =[n for n in pred_edges if n[0] in cluster1 and n[1] in cluster1]
-                            pred_edges2    =[n for n in pred_edges if n[0] in cluster2 and n[1] in cluster2]
+                        pred_edges12 = [
+                            n
+                            for n in pred_edges
+                            if n[0] in cluster1 and n[1] in cluster2
+                        ]
+                        pred_edges21 = [
+                            n
+                            for n in pred_edges
+                            if n[0] in cluster2 and n[1] in cluster1
+                        ]
+                        inter_cluster_edges = pred_edges12 + pred_edges21
 
-                            pred_edges12    =[n for n in pred_edges if n[0] in cluster1 and n[1] in cluster2]
-                            pred_edges21    =[n for n in pred_edges if n[0] in cluster2 and n[1] in cluster1]
-                            inter_cluster_edges =pred_edges12 + pred_edges21
+                        data.append({})
+                        data[-1]["source"] = {}
+                        data[-1]["source"]["id"] = i
+                        data[-1]["source"]["links"] = pred_edges1
 
-                            data.append({})
-                            data[-1]['source']={}
-                            data[-1]['source']['id']    =i
-                            data[-1]['source']['links'] =pred_edges1
+                        data[-1]["target"] = {}
+                        data[-1]["target"]["id"] = j
+                        data[-1]["target"]["links"] = pred_edges2
 
-                            data[-1]['target']={}
-                            data[-1]['target']['id']    =j
-                            data[-1]['target']['links'] =pred_edges2
-
-                            data[-1]['links']=inter_cluster_edges
+                        data[-1]["links"] = inter_cluster_edges
     return data
 
 

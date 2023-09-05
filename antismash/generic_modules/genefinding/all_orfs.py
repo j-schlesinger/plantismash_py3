@@ -19,19 +19,21 @@
 import logging
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
+
 class Orf:
     """A putative open reading frame"""
+
     def __init__(self, start, stop, direction):
         self.start = start
         self.stop = stop
         self.direction = direction
 
     def __str__(self):
-        orf_str =  ""
+        orf_str = ""
         if self.direction == 1:
-            orf_str += "%9d%9d  +%d" % (self.start+1, self.stop+1, self.get_frame())
+            orf_str += "%9d%9d  +%d" % (self.start + 1, self.stop + 1, self.get_frame())
         else:
-            orf_str += "%9d%9d  -%d" % (self.stop+1, self.start+1, self.get_frame())
+            orf_str += "%9d%9d  -%d" % (self.stop + 1, self.start + 1, self.get_frame())
         return orf_str
 
     def __cmp__(self, other):
@@ -43,12 +45,13 @@ class Orf:
 
     def len(self):
         """Get the length of the Orf"""
-        return self.stop+2 - self.start
+        return self.stop + 2 - self.start
+
 
 def scan_orfs(seq, direction):
     seq = seq.upper()
-    START_CODONS = ('ATG', 'GTG', 'TTG')
-    STOP_CODONS  = ('TAA', 'TAG', 'TGA')
+    START_CODONS = ("ATG", "GTG", "TTG")
+    STOP_CODONS = ("TAA", "TAG", "TGA")
     """Scan for open reading frames on a given sequence"""
     matches = []
     # Remember the last stop codon found per frame, so we can take some
@@ -57,21 +60,21 @@ def scan_orfs(seq, direction):
     last_orf = [None, None, None]
     # cache the sequence length
     seq_len = len(seq)
-    for i in xrange(0, seq_len - 2 ):
-        if seq[i:i+3] in START_CODONS or i == 0:
+    for i in range(0, seq_len - 2):
+        if seq[i : i + 3] in START_CODONS or i == 0:
             # If the last stop codon found is in the frame of this start codon
             # and the start codon is upstream of the stop codon, we have
             # already found a start codon further upstream.
-            if i < last_stop[i%3]:
+            if i < last_stop[i % 3]:
                 continue
             # Look for the next stop codon in this frame
             do_continue = False
-            for j in xrange(i, seq_len - 2, 3):
-                if seq[j:j+3] in STOP_CODONS:
+            for j in range(i, seq_len - 2, 3):
+                if seq[j : j + 3] in STOP_CODONS:
                     # Skip Orfs that are shorter than 20 AA / 60 bases
                     if j - i > 60:
                         if direction == 1:
-                            new_orf = Orf(i, j+2, direction)
+                            new_orf = Orf(i, j + 2, direction)
                         else:
                             # i and j are the position on the reverse strand, convert this back to
                             # the forward strand positions
@@ -84,56 +87,60 @@ def scan_orfs(seq, direction):
                     break
             if do_continue:
                 continue
-            #Save orfs ending at the end of the sequence without stop codon
+            # Save orfs ending at the end of the sequence without stop codon
             j = seq_len - 1
             if direction == 1:
-                new_orf = Orf(i, j+2, direction)
+                new_orf = Orf(i, j + 2, direction)
             else:
                 # i and j are the position on the reverse strand, convert this back to
                 # the forward strand positions
                 new_orf = Orf(seq_len - (j + 2), seq_len - i, direction)
             matches.append(new_orf)
-            last_stop[i % 3] = j+2
+            last_stop[i % 3] = j + 2
             last_orf[i % 3] = new_orf
     return matches
+
 
 def get_reverse_complement(seq):
     seq = seq.upper()
     """generate the reverse strand of a given sequence"""
     reverse_seq = ""
-    for i in xrange(len(seq) - 1, -1, -1):
-        if seq[i] == 'G':
-            reverse_seq += 'C'
-        elif seq[i] == 'C':
-            reverse_seq += 'G'
-        elif seq[i] == 'A':
-            reverse_seq += 'T'
-        elif seq[i] == 'T':
-            reverse_seq += 'A'
+    for i in range(len(seq) - 1, -1, -1):
+        if seq[i] == "G":
+            reverse_seq += "C"
+        elif seq[i] == "C":
+            reverse_seq += "G"
+        elif seq[i] == "A":
+            reverse_seq += "T"
+        elif seq[i] == "T":
+            reverse_seq += "A"
         else:
-            reverse_seq += 'X'
+            reverse_seq += "X"
     return reverse_seq
+
 
 def sort_orfs(orfs):
     if len(orfs) == 0:
         return orfs
     startpositions = [min([orf.start, orf.stop]) for orf in orfs]
-    positions_and_orfs = zip(startpositions, orfs)
+    positions_and_orfs = list(zip(startpositions, orfs))
     positions_and_orfs.sort()
-    startpositions, orfs = zip(*positions_and_orfs)
+    startpositions, orfs = list(zip(*positions_and_orfs))
     return orfs
 
+
 def find_all_orfs(seq_record, options):
-    #Get sequence
+    # Get sequence
     fasta_seq = str(seq_record.seq)
-    #Find orfs
+    # Find orfs
     forward_matches = scan_orfs(fasta_seq, 1)
     reverse_matches = scan_orfs(get_reverse_complement(fasta_seq), -1)
     all_orfs = forward_matches + reverse_matches
-    #Create seq_record features for identified genes
+    # Create seq_record features for identified genes
     if len(all_orfs) == 0:
-        logging.error("No ORFs found. Please check the " \
-            "format of your input FASTA file.")
+        logging.error(
+            "No ORFs found. Please check the " "format of your input FASTA file."
+        )
     orfnr = 0
     for orf in sort_orfs(all_orfs):
         if orf.start < 0:
@@ -146,8 +153,17 @@ def find_all_orfs(seq_record, options):
         while orf.stop > seqlength:
             orf.stop = orf.stop - 3
         loc = FeatureLocation(orf.start, orf.stop, strand=orf.direction)
-        feature = SeqFeature(location=loc, id=str(orf), type="CDS",
-                    qualifiers={'locus_tag': ['ctg%s_allorf%s%s' % (options.record_idx, "0" * (6 - len(str(orfnr))), str(orfnr))]})
-        feature.qualifiers['note'] = ["auto-all-orf"]
+        feature = SeqFeature(
+            location=loc,
+            id=str(orf),
+            type="CDS",
+            qualifiers={
+                "locus_tag": [
+                    "ctg%s_allorf%s%s"
+                    % (options.record_idx, "0" * (6 - len(str(orfnr))), str(orfnr))
+                ]
+            },
+        )
+        feature.qualifiers["note"] = ["auto-all-orf"]
         seq_record.features.append(feature)
         orfnr += 1

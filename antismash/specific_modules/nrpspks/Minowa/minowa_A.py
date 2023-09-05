@@ -8,15 +8,16 @@ import sys
 from os import path
 from antismash import utils
 
+
 ##Functions used in this program
 # Function that reads the fasta file into a dictionary
 def fastadict(fasta):
-    file = open(fasta,"r")
+    file = open(fasta, "r")
     text = file.read()
-    text = text.replace("\r","\n")
+    text = text.replace("\r", "\n")
     text = text.strip()
-    #Replaces all spaces with "_" to avoid problems
-    text = text.replace(' ','_')
+    # Replaces all spaces with "_" to avoid problems
+    text = text.replace(" ", "_")
     text = text.split()
     dictseq = {}
     for a in text:
@@ -29,27 +30,29 @@ def fastadict(fasta):
             dictseq[d] = f
     return dictseq
 
+
 # Function that extracts all sequence names from the fasta dictionary
 def lnames(fastadict):
-    items = fastadict.items()
+    items = list(fastadict.items())
     items.sort()
     return [names for names, seqs in items]
 
 
 # Function that extracts all sequences from the fasta dictionary
 def lseqs(fastadict):
-    items = fastadict.items()
+    items = list(fastadict.items())
     items.sort()
     return [seqs for names, seqs in items]
 
+
 def fastanames(fasta):
     names = []
-    file = open(fasta,"r")
+    file = open(fasta, "r")
     text = file.read()
-    text = text.replace("\r","\n")
+    text = text.replace("\r", "\n")
     text = text.strip()
-    #Replaces all spaces with "_" to avoid problems
-    text = text.replace(' ','_')
+    # Replaces all spaces with "_" to avoid problems
+    text = text.replace(" ", "_")
     text = text.split()
     for a in text:
         if ">" in a[0]:
@@ -58,17 +61,19 @@ def fastanames(fasta):
             names.append(d)
     return names
 
-def fastaseqs(names,fastadict):
+
+def fastaseqs(names, fastadict):
     seqs = []
     for i in names:
         seq = fastadict[i]
         seqs.append(seq)
     return seqs
 
-def writefasta(names,seqs,file):
+
+def writefasta(names, seqs, file):
     e = 0
     f = len(names) - 1
-    out_file = open(file,"w")
+    out_file = open(file, "w")
     while e <= f:
         out_file.write(">")
         out_file.write(names[e])
@@ -78,12 +83,13 @@ def writefasta(names,seqs,file):
         e += 1
     out_file.close()
 
-def hmmsearch(fasta,hmm):
+
+def hmmsearch(fasta, hmm):
     lsname = fastanames(fasta)[0]
     text, err, retcode = utils.execute(["hmmsearch", "--noali", hmm, fasta])
-    text = text.replace("\r","\n")
-    start = text.find('Domain annotation for each sequence:')
-    end = text.find('Internal pipeline statistics summary:')
+    text = text.replace("\r", "\n")
+    start = text.find("Domain annotation for each sequence:")
+    end = text.find("Internal pipeline statistics summary:")
     lines = []
     ls_names = []
     ls_domain_nrs = []
@@ -91,7 +97,7 @@ def hmmsearch(fasta,hmm):
     ls_ends = []
     ls_scores = []
     ls_evalues = []
-    lines = text[start:end].split('\n')
+    lines = text[start:end].split("\n")
     if "[No targets detected" in text:
         ls_names.append(lsname)
         ls_scores.append(str(0))
@@ -115,20 +121,23 @@ def hmmsearch(fasta,hmm):
         dicthmm[i] = ls_scores[j]
     return dicthmm
 
+
 def hmmnames(hmmdict):
-    items = hmmdict.items()
+    items = list(hmmdict.items())
     return [names for names, scores in items]
 
+
 def hmmscores(hmmdict):
-    items = hmmdict.items()
+    items = list(hmmdict.items())
     return [scores for names, scores in items]
 
 
 def sortdictkeysbyvalues(dict):
-    items = [(value, key) for key, value in dict.items()]
+    items = [(value, key) for key, value in list(dict.items())]
     items.sort()
     items.reverse()
     return [key for value, key in items]
+
 
 def run_minowa_a(infile2, outfile):
     ## Core
@@ -137,27 +146,39 @@ def run_minowa_a(infile2, outfile):
     out_file = open(outfile, "w")
     dict2 = fastadict(infile2)
     namesa = fastanames(infile2)
-    seqsa = fastaseqs(namesa,dict2)
+    seqsa = fastaseqs(namesa, dict2)
     startpos = 65
     namesb = namesa
     seqsb = seqsa
 
     for i in namesb:
         seq = seqsb[namesb.index(i)]
-        writefasta([i],[seq],"infile.fasta")
+        writefasta([i], [seq], "infile.fasta")
         infile2 = "infile.fasta"
         out_file.write("\\\\" + "\n" + i + "\n")
         refsequence = "P0C062_A1"
         namesa = [i]
         seqsa = [seq]
 
-        #Run muscle and collect sequence positions from file
-        utils.execute(["muscle", "-profile", "-quiet", "-in1", infile, "-in2", infile2, "-out", "muscle.fasta"])
+        # Run muscle and collect sequence positions from file
+        utils.execute(
+            [
+                "muscle",
+                "-profile",
+                "-quiet",
+                "-in1",
+                infile,
+                "-in2",
+                infile2,
+                "-out",
+                "muscle.fasta",
+            ]
+        )
         file = open(utils.get_full_path(__file__, "Apositions.txt"), "r")
         text = file.read()
-        text = text.replace("\r","\n")
+        text = text.replace("\r", "\n")
         text = text.strip()
-        text = text.replace(' ','_')
+        text = text.replace(" ", "_")
         positions = text.split("\t")
         positions2 = []
         for i in positions:
@@ -166,7 +187,7 @@ def run_minowa_a(infile2, outfile):
             positions2.append(pos)
         positions = positions2
 
-        #Count residues in ref sequence and put positions in list
+        # Count residues in ref sequence and put positions in list
         muscle_dict = fastadict(muscle_file)
         muscle_seqs = lseqs(muscle_dict)
         muscle_names = lnames(muscle_dict)
@@ -185,7 +206,7 @@ def run_minowa_a(infile2, outfile):
             b += 1
             refseq = refseq[1:]
 
-        #Extract positions from query sequence and create fasta file to use as input for hmm searches
+        # Extract positions from query sequence and create fasta file to use as input for hmm searches
         query = namesa[0]
         query_seqnr = muscle_names.index(query)
         query_seq = muscle_seqs[query_seqnr]
@@ -199,15 +220,16 @@ def run_minowa_a(infile2, outfile):
         query_names.append(query)
         query_seqs = []
         query_seqs.append(seq)
-        writefasta(query_names,query_seqs,"hmm_infile.fasta")
-        #- then use list to extract positions from every sequence -> HMMs (one time, without any query sequence)
+        writefasta(query_names, query_seqs, "hmm_infile.fasta")
+        # - then use list to extract positions from every sequence -> HMMs (one time, without any query sequence)
 
-
-        #Compare scores and output prediction
+        # Compare scores and output prediction
         hmm_names = []
         hmm_scores = []
-        a_hmms_dir = utils.get_full_path(__file__, 'A_HMMs')
-        hmmresults = hmmsearch("hmm_infile.fasta", path.join(a_hmms_dir, "2-3-diaminopropionate.hmm"))
+        a_hmms_dir = utils.get_full_path(__file__, "A_HMMs")
+        hmmresults = hmmsearch(
+            "hmm_infile.fasta", path.join(a_hmms_dir, "2-3-diaminopropionate.hmm")
+        )
         hmmname = "2-3-diaminoproprionate"
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
@@ -232,7 +254,9 @@ def run_minowa_a(infile2, outfile):
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
         hmm_scores.append(hmmscore[0])
-        hmmresults = hmmsearch("hmm_infile.fasta", path.join(a_hmms_dir, "alaninol.hmm"))
+        hmmresults = hmmsearch(
+            "hmm_infile.fasta", path.join(a_hmms_dir, "alaninol.hmm")
+        )
         hmmname = "alaninol"
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
@@ -247,7 +271,9 @@ def run_minowa_a(infile2, outfile):
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
         hmm_scores.append(hmmscore[0])
-        hmmresults = hmmsearch("hmm_infile.fasta", path.join(a_hmms_dir, "beta-Lys.hmm"))
+        hmmresults = hmmsearch(
+            "hmm_infile.fasta", path.join(a_hmms_dir, "beta-Lys.hmm")
+        )
         hmmname = "beta-Lys"
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
@@ -277,7 +303,9 @@ def run_minowa_a(infile2, outfile):
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
         hmm_scores.append(hmmscore[0])
-        hmmresults = hmmsearch("hmm_infile.fasta", path.join(a_hmms_dir, "guanidinoacetic_acid.hmm"))
+        hmmresults = hmmsearch(
+            "hmm_infile.fasta", path.join(a_hmms_dir, "guanidinoacetic_acid.hmm")
+        )
         hmmname = "guanidinoacetic_acid"
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
@@ -317,7 +345,9 @@ def run_minowa_a(infile2, outfile):
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
         hmm_scores.append(hmmscore[0])
-        hmmresults = hmmsearch("hmm_infile.fasta", path.join(a_hmms_dir, "Phenylacetate.hmm"))
+        hmmresults = hmmsearch(
+            "hmm_infile.fasta", path.join(a_hmms_dir, "Phenylacetate.hmm")
+        )
         hmmname = "Phenylacetate"
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
@@ -337,7 +367,9 @@ def run_minowa_a(infile2, outfile):
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
         hmm_scores.append(hmmscore[0])
-        hmmresults = hmmsearch("hmm_infile.fasta", path.join(a_hmms_dir, "Thr-4-Cl.hmm"))
+        hmmresults = hmmsearch(
+            "hmm_infile.fasta", path.join(a_hmms_dir, "Thr-4-Cl.hmm")
+        )
         hmmname = "Thr-4-Cl"
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
@@ -392,7 +424,9 @@ def run_minowa_a(infile2, outfile):
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
         hmm_scores.append(hmmscore[0])
-        hmmresults = hmmsearch("hmm_infile.fasta", path.join(a_hmms_dir, "capreomycidine.hmm"))
+        hmmresults = hmmsearch(
+            "hmm_infile.fasta", path.join(a_hmms_dir, "capreomycidine.hmm")
+        )
         hmmname = "capreomycidine"
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
@@ -457,7 +491,9 @@ def run_minowa_a(infile2, outfile):
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
         hmm_scores.append(hmmscore[0])
-        hmmresults = hmmsearch("hmm_infile.fasta", path.join(a_hmms_dir, "pipecolate.hmm"))
+        hmmresults = hmmsearch(
+            "hmm_infile.fasta", path.join(a_hmms_dir, "pipecolate.hmm")
+        )
         hmmname = "pipecolate"
         hmm_names.append(hmmname)
         hmmscore = hmmscores(hmmresults)
@@ -488,7 +524,7 @@ def run_minowa_a(infile2, outfile):
         hmmscore = hmmscores(hmmresults)
         hmm_scores.append(hmmscore[0])
 
-        #Sort names & scores by scores:
+        # Sort names & scores by scores:
         scoredict = {}
         a = 0
         for i in hmm_names:

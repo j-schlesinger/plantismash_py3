@@ -6,3 +6,6 @@ tags
 *.h3?
 .DS_Store
 .idea/
+venv/
+*.bak
+modeling/

@@ -18,12 +18,13 @@ import os
 from os import path
 import sys
 import shutil
-from NRPSPredictor2 import nrpscodepred
-from Minowa import minowa_A
+from .NRPSPredictor2 import nrpscodepred
+from .Minowa import minowa_A
 from helperlibs.wrappers.io import TemporaryDirectory
 
+
 def extract_nrps_genes(pksnrpscoregenes, domaindict, seq_record, extra_aa=0):
-    nrpsnames = [] 
+    nrpsnames = []
     nrpsseqs = []
     for feature in pksnrpscoregenes:
         locus = utils.get_gene_id(feature)
@@ -40,49 +41,91 @@ def extract_nrps_genes(pksnrpscoregenes, domaindict, seq_record, extra_aa=0):
                 nrpsseqs.append(seq)
     return nrpsnames, nrpsseqs
 
+
 def run_nrpspredictor(seq_record, nrpsnames, nrpsseqs, options):
-    #NRPSPredictor: extract AMP-binding + 120 residues N-terminal of this domain, extract 8 Angstrom residues and insert this into NRPSPredictor
+    # NRPSPredictor: extract AMP-binding + 120 residues N-terminal of this domain, extract 8 Angstrom residues and insert this into NRPSPredictor
     with TemporaryDirectory(change=True):
         nrpsseqs_file = "nrpsseqs.fasta"
         NRPSPredictor2_dir = utils.get_full_path(__file__, "NRPSPredictor2")
         utils.writefasta(nrpsnames, nrpsseqs, nrpsseqs_file)
-        #Get NRPSPredictor2 code predictions, output sig file for input for NRPSPredictor2 SVMs
+        # Get NRPSPredictor2 code predictions, output sig file for input for NRPSPredictor2 SVMs
         nrpscodepred.run_nrpscodepred(options)
-        #Run NRPSPredictor2 SVM
-        datadir = path.join(NRPSPredictor2_dir, 'data')
-        libdir = path.join(NRPSPredictor2_dir, 'lib')
-        jarfile = path.join(NRPSPredictor2_dir, 'build', 'NRPSpredictor2.jar')
-        classpath = [ jarfile,
-                     '%s/java-getopt-1.0.13.jar' % libdir,
-                     '%s/Utilities.jar' % libdir,
-                     '%s/libsvm.jar' % libdir
-                    ]
+        # Run NRPSPredictor2 SVM
+        datadir = path.join(NRPSPredictor2_dir, "data")
+        libdir = path.join(NRPSPredictor2_dir, "lib")
+        jarfile = path.join(NRPSPredictor2_dir, "build", "NRPSpredictor2.jar")
+        classpath = [
+            jarfile,
+            "%s/java-getopt-1.0.13.jar" % libdir,
+            "%s/Utilities.jar" % libdir,
+            "%s/libsvm.jar" % libdir,
+        ]
         if sys.platform == ("linux2") or sys.platform == ("darwin"):
             java_separator = ":"
         elif sys.platform == ("win32"):
             java_separator = ";"
-        commands = ['java', '-Ddatadir=%s' % datadir, '-cp', java_separator.join(classpath),
-                    'org.roettig.NRPSpredictor2.NRPSpredictor2', '-i', 'input.sig',
-                    '-r', path.join(options.raw_predictions_outputfolder, "ctg" + str(options.record_idx) + '_nrpspredictor2_svm.txt'),
-                    '-s', '1', '-b', options.eukaryotic and '1' or '0']
+        commands = [
+            "java",
+            "-Ddatadir=%s" % datadir,
+            "-cp",
+            java_separator.join(classpath),
+            "org.roettig.NRPSpredictor2.NRPSpredictor2",
+            "-i",
+            "input.sig",
+            "-r",
+            path.join(
+                options.raw_predictions_outputfolder,
+                "ctg" + str(options.record_idx) + "_nrpspredictor2_svm.txt",
+            ),
+            "-s",
+            "1",
+            "-b",
+            options.eukaryotic and "1" or "0",
+        ]
         out, err, retcode = utils.execute(commands)
-        if err != '':
-            logging.debug('running nrpspredictor2 gave error %r' % err)
-        #Copy NRPSPredictor results and move back to original directory
+        if err != "":
+            logging.debug("running nrpspredictor2 gave error %r" % err)
+        # Copy NRPSPredictor results and move back to original directory
         try:
-            os.remove(path.join(options.raw_predictions_outputfolder, "ctg" + str(options.record_idx) + "_nrpspredictor2_codes.txt"))
+            os.remove(
+                path.join(
+                    options.raw_predictions_outputfolder,
+                    "ctg" + str(options.record_idx) + "_nrpspredictor2_codes.txt",
+                )
+            )
         except:
             pass
-        shutil.move("ctg" + str(options.record_idx) + "_nrpspredictor2_codes.txt", options.raw_predictions_outputfolder)
+        shutil.move(
+            "ctg" + str(options.record_idx) + "_nrpspredictor2_codes.txt",
+            options.raw_predictions_outputfolder,
+        )
+
 
 def run_minowa_predictor_nrps(pksnrpscoregenes, domaindict, seq_record, options):
-    #Minowa method: extract AMP-binding domain, and run Minowa_A
-    logging.info("Predicting NRPS A domain substrate specificities by Minowa " \
-        "et al. method")
-    nrpsnames2, nrpsseqs2 = extract_nrps_genes(pksnrpscoregenes, domaindict, seq_record, extra_aa=0)
-    #Make Minowa output folder
-    utils.writefasta(nrpsnames2, nrpsseqs2,
-            path.join(options.raw_predictions_outputfolder, "ctg" + str(options.record_idx) + "_nrpsseqs.fasta"))
+    # Minowa method: extract AMP-binding domain, and run Minowa_A
+    logging.info(
+        "Predicting NRPS A domain substrate specificities by Minowa " "et al. method"
+    )
+    nrpsnames2, nrpsseqs2 = extract_nrps_genes(
+        pksnrpscoregenes, domaindict, seq_record, extra_aa=0
+    )
+    # Make Minowa output folder
+    utils.writefasta(
+        nrpsnames2,
+        nrpsseqs2,
+        path.join(
+            options.raw_predictions_outputfolder,
+            "ctg" + str(options.record_idx) + "_nrpsseqs.fasta",
+        ),
+    )
     with TemporaryDirectory(change=True):
-        minowa_A.run_minowa_a(path.join(options.raw_predictions_outputfolder, "ctg" + str(options.record_idx) + "_nrpsseqs.fasta"),
-                              path.join(options.raw_predictions_outputfolder, "ctg" + str(options.record_idx) + "_minowa_nrpspredoutput.txt"))
+        minowa_A.run_minowa_a(
+            path.join(
+                options.raw_predictions_outputfolder,
+                "ctg" + str(options.record_idx) + "_nrpsseqs.fasta",
+            ),
+            path.join(
+                options.raw_predictions_outputfolder,
+                "ctg" + str(options.record_idx) + "_minowa_nrpspredoutput.txt",
+            ),
+        )
