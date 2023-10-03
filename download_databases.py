@@ -15,7 +15,9 @@
 
 """Script to download and install Pfam and ClusterBlast databases"""
 
-import urllib.request, urllib.error, urllib.parse
+import urllib.request
+import urllib.error
+import urllib.parse
 import tarfile
 import gzip
 import backports.lzma as lzma
@@ -37,7 +39,7 @@ CLUSTERBLAST_CHECKSUM = (
 )
 
 if sys.platform == ("win32") or sys.platform == ("darwin"):
-    os.environ["EXEC"] = os.getcwd() + "\exec"
+    os.environ["EXEC"] = os.getcwd() + r"\exec"
     os.environ["PATH"] = (
         os.pathsep + os.environ["EXEC"] + os.pathsep + os.environ["PATH"]
     )
@@ -104,7 +106,8 @@ def check_diskspace(file_url):
 def download_file(url, filename):
     """Download a file"""
     print(
-        ("Downloading large file %s. Please be patient..." % (path.basename(filename)))
+        ("Downloading large file %s. Please be patient..." %
+         (path.basename(filename)))
     )
     try:
         req = urllib.request.urlopen(url)
@@ -182,7 +185,8 @@ def untar_file(filename):
         )
         return
     print(
-        ("Extraction of %s finished successfully." % (filename.rpartition(os.sep)[2]))
+        ("Extraction of %s finished successfully." %
+         (filename.rpartition(os.sep)[2]))
     )
 
 
@@ -254,17 +258,22 @@ def main():
     delete_file(filename + ".xz")
 
     # hmmpress the NRPS/PKS specific databases
-    compile_pfam(path.join("antismash", "specific_modules", "nrpspks", "abmotifs.hmm"))
+    compile_pfam(path.join("antismash", "specific_modules",
+                 "nrpspks", "abmotifs.hmm"))
     compile_pfam(
-        path.join("antismash", "specific_modules", "nrpspks", "dockingdomains.hmm")
+        path.join("antismash", "specific_modules",
+                  "nrpspks", "dockingdomains.hmm")
     )
-    compile_pfam(path.join("antismash", "specific_modules", "nrpspks", "ksdomains.hmm"))
+    compile_pfam(path.join("antismash", "specific_modules",
+                 "nrpspks", "ksdomains.hmm"))
     compile_pfam(
-        path.join("antismash", "specific_modules", "nrpspks", "nrpspksdomains.hmm")
+        path.join("antismash", "specific_modules",
+                  "nrpspks", "nrpspksdomains.hmm")
     )
 
     # hmmpress the smcog specific database
-    compile_pfam(path.join("antismash", "generic_modules", "smcogs", "smcogs.hmm"))
+    compile_pfam(
+        path.join("antismash", "generic_modules", "smcogs", "smcogs.hmm"))
 
 
 if __name__ == "__main__":

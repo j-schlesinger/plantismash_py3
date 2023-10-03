@@ -20,10 +20,7 @@ from os import path
 import subprocess
 import string
 
-try:
-    from io import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 from argparse import Namespace
 import warnings
 
@@ -586,6 +583,12 @@ def execute(commands, input=None):
 
     if input is not None:
         stdin_redir = subprocess.PIPE
+        if not isinstance(input, bytes):
+            try:
+                input = bytes(input, 'utf-8')
+            except TypeError:
+                raise Exception(
+                    f"Cannot, process variable of type {type(input)} into bytes")
     else:
         stdin_redir = None
 
@@ -646,6 +649,8 @@ def run_hmmsearch(query_hmmfile, target_sequence, cutoff=None):
             "hmmsearch returned %d: %r while searching %r", retcode, err, query_hmmfile
         )
         return []
+    if isinstance(out, bytes):
+        out = out.decode('utf-8')
     res_stream = StringIO(out)
     results = list(SearchIO.parse(res_stream, "hmmer3-text"))
     return results
@@ -667,6 +672,8 @@ def run_hmmscan(target_hmmfile, query_sequence, opts=None):
             "hmmscan returned %d: %r while scanning %r", retcode, err, query_sequence
         )
         return []
+    if isinstance(out, bytes):
+        out = out.decode('utf-8')
     res_stream = StringIO(out)
     results = list(SearchIO.parse(res_stream, "hmmer3-text"))
     return results
@@ -1623,8 +1630,8 @@ def get_percentage_identity(feature_1, feature_2):
         ]
         try:
             out, err, retcode = execute(command)
-            if len(out.split("\n")) > 1:
-                result = round(float(out.split("\n")[0]), 2)
+            if len(out.split(b"\n")) > 1:
+                result = round(float(out.split(b"\n")[0]), 2)
         except OSError:
             result = 0.00
 

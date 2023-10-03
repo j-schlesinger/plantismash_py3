@@ -21,7 +21,8 @@ import random
 if sys.platform == ("win32") or sys.platform == ("darwin"):
     os.environ["EXEC"] = os.getcwd() + os.sep + "exec"
     os.environ["PYTHON"] = os.getcwd() + os.sep + "python"
-    sys.path.append(os.sep.join([os.getcwd(), "python", "Lib", "site-packages"]))
+    sys.path.append(os.sep.join(
+        [os.getcwd(), "python", "Lib", "site-packages"]))
     os.environ["PATH"] = (
         os.pathsep + os.environ["PYTHON"] + os.pathsep + os.environ["PATH"]
     )
@@ -31,6 +32,7 @@ if sys.platform == ("win32") or sys.platform == ("darwin"):
 
 import logging
 import argparse
+import functools
 from os import path
 import multiprocessing
 import straight.plugin
@@ -63,7 +65,9 @@ try:
 except ImportError:
     USE_BIOSQL = False
 from numpy import array_split, array
-import urllib.request, urllib.error, urllib.parse
+import urllib.request
+import urllib.error
+import urllib.parse
 from urllib.error import URLError
 import http.client
 import time
@@ -87,14 +91,16 @@ def ValidateDetectionTypes(detection_models):
     class Validator(argparse.Action):
         def __call__(self, parser, args, values, option_string=None):
             if values == "all":
-                values = ",".join(detection_models).replace(";", ",").split(",")
+                values = ",".join(detection_models).replace(
+                    ";", ",").split(",")
             else:
                 values = values.replace(";", ",").split(",")
                 try:
                     for value in values:
                         if value not in detection_models:
                             raise ValueError(
-                                "invalid detection models {s!r}".format(s=value)
+                                "invalid detection models {s!r}".format(
+                                    s=value)
                             )
                 except ValueError as e:
                     print("\nInput error:", e, "\n")
@@ -116,7 +122,8 @@ def ValidateClusterTypes(clustertypes):
             try:
                 for value in values:
                     if value not in clustertypes:
-                        raise ValueError("invalid clustertype {s!r}".format(s=value))
+                        raise ValueError(
+                            "invalid clustertype {s!r}".format(s=value))
             except ValueError as e:
                 print("\nInput error:", e, "\n")
                 print(
@@ -178,7 +185,7 @@ def main():
         help="How many CPUs to use in parallel. (default: %(default)s)",
     )
 
-    ## grouped arguments
+    # grouped arguments
 
     group = parser.add_argument_group("Basic analysis options", "", basic=True)
     group.add_argument(
@@ -437,7 +444,8 @@ def main():
         help="Training models for the glimmerHMM (see antismash/generic_modules/genefinding/).",
     )
 
-    group = parser.add_argument_group("CD-HIT specific options", "", param=["--cdhit"])
+    group = parser.add_argument_group(
+        "CD-HIT specific options", "", param=["--cdhit"])
     group.add_argument(
         "--cdh-cutoff",
         dest="cdh_cutoff",
@@ -567,7 +575,8 @@ def main():
             help="Disable %s" % plugin.short_description,
         )
 
-    group = parser.add_argument_group("Debugging & Logging options", "", basic=True)
+    group = parser.add_argument_group(
+        "Debugging & Logging options", "", basic=True)
     group.add_argument(
         "-v",
         "--verbose",
@@ -619,7 +628,7 @@ def main():
         help="Display the version number and exit.",
     )
 
-    ## endof grouped arguments
+    # endof grouped arguments
 
     # if --help, show help texts and exit
     if list(set(["-h", "--help", "--help-showall"]) & set(sys.argv)):
@@ -627,7 +636,8 @@ def main():
         sys.exit(0)
 
     # Parse arguments, removing hyphens from the beginning of file names to avoid conflicts with argparse
-    infile_extensions = (".fasta", ".fas", ".fa", ".gb", ".gbk", ".emb", ".embl")
+    infile_extensions = (".fasta", ".fas", ".fa",
+                         ".gb", ".gbk", ".emb", ".embl")
     sys.argv = [
         arg.replace("-", "< > HYPHEN < >")
         if (arg.endswith(infile_extensions) and arg[0] == "-")
@@ -696,7 +706,8 @@ def main():
             sys.exit(1)
         cdh_display_cutoff = float(options.cdh_display_cutoff)
         if not 0.2 <= cdh_display_cutoff <= 1.0:
-            logging.error("cd-hit display cutoff is on wrong value (use 0.2 - 1.0)")
+            logging.error(
+                "cd-hit display cutoff is on wrong value (use 0.2 - 1.0)")
             sys.exit(1)
 
     if options.input_type == "prot" and (
@@ -712,7 +723,8 @@ def main():
         )
         sys.exit(2)
     if options.input_type == "prot" and (options.start != -1 or options.end != -1):
-        logging.error("Protein input option is not compatible with --start and --end.")
+        logging.error(
+            "Protein input option is not compatible with --start and --end.")
         sys.exit(2)
 
     if options.coexpress:
@@ -725,7 +737,8 @@ def main():
         options.coexpress_soft_files = []
         options.coexpress_csv_files = []
         if options.coexpress_soft_file:
-            options.coexpress_soft_file = path.abspath(options.coexpress_soft_file)
+            options.coexpress_soft_file = path.abspath(
+                options.coexpress_soft_file)
             soft_files = options.coexpress_soft_file.split(",")
             for fname in soft_files:
                 if fname == "" or not path.isfile(fname):
@@ -734,7 +747,8 @@ def main():
                 else:
                     options.coexpress_soft_files.append(path.abspath(fname))
         if options.coexpress_csv_file:
-            options.coexpress_csv_file = path.abspath(options.coexpress_csv_file)
+            options.coexpress_csv_file = path.abspath(
+                options.coexpress_csv_file)
             csv_files = options.coexpress_csv_file.split(",")
             for fname in csv_files:
                 if fname == "" or not path.isfile(fname):
@@ -785,7 +799,8 @@ def main():
         sys.exit(1)
 
     if "outputfoldername" not in options:
-        options.outputfoldername = path.splitext(path.basename(options.sequences[0]))[0]
+        options.outputfoldername = path.splitext(
+            path.basename(options.sequences[0]))[0]
     if not os.path.exists(options.outputfoldername):
         os.mkdir(options.outputfoldername)
     options.full_outputfolder_path = path.abspath(options.outputfoldername)
@@ -817,7 +832,8 @@ def main():
         utils.log_status("Parsing the input sequence(s)")
         seq_records = parse_input_sequences(options)
         if options.input_type == "nucl":
-            seq_records = [record for record in seq_records if len(record.seq) > 1000]
+            seq_records = [
+                record for record in seq_records if len(record.seq) > 1000]
             if len(seq_records) == 0:
                 logging.error(
                     "Input does not contain contigs larger than minimum size of 1000 bp."
@@ -836,7 +852,8 @@ def main():
     # parse coexpress input file
     if options.coexpress:
         logging.info("Parsing CoExpress input file...")
-        options.geo_dataset = coexpress.parse_geofiles(options.coexpress_soft_files)
+        options.geo_dataset = coexpress.parse_geofiles(
+            options.coexpress_soft_files)
         options.geo_dataset.extend(
             coexpress.parse_csvfiles(options.coexpress_csv_files)
         )
@@ -871,7 +888,8 @@ def main():
         features_to_match = {}
         logging.info("Doing whole genome expression matching...")
         for seq_record in seq_records:
-            features_to_match[seq_record.id] = utils.get_cds_features(seq_record)
+            features_to_match[seq_record.id] = utils.get_cds_features(
+                seq_record)
         for i in range(0, len(options.geo_dataset)):
             logging.debug(
                 "Matching expression for dataset (%d/%d).."
@@ -940,7 +958,8 @@ def main():
                 new_id = composite_id
                 if composite_id.split(":")[0] == old_seq_id:
                     new_id = ":".join(
-                        [seq_record.id.replace(":", "_"), composite_id.split(":")[-1]]
+                        [seq_record.id.replace(
+                            ":", "_"), composite_id.split(":")[-1]]
                     )
                 new_hmm_results[new_id] = options.hmm_results[composite_id]
             options.hmm_results = new_hmm_results
@@ -980,7 +999,8 @@ def main():
                 options.knownclusterblast = None
                 options.modeling = "none"
                 options.smcogs = "TRUE"
-                options.enabled_cluster_types = ValidateClusterTypes(clustertypes)
+                options.enabled_cluster_types = ValidateClusterTypes(
+                    clustertypes)
 
                 options.extrarecord[seq_record.id] = argparse.Namespace()
 
@@ -1079,7 +1099,8 @@ def main():
                             ";"
                         ):
                             cluster_results.append(
-                                cluster_result.split(" (E-value")[0].split("/")[-1]
+                                cluster_result.split(
+                                    " (E-value")[0].split("/")[-1]
                                 + " (E-value"
                                 + cluster_result.split(" (E-value")[-1]
                             )
@@ -1109,7 +1130,8 @@ def main():
                     temp_qual = []
                     for row in cds.qualifiers["sec_met"]:
                         if row.startswith("Type: "):
-                            clustertypes = list(set(row.split("Type: ")[-1].split("-")))
+                            clustertypes = list(
+                                set(row.split("Type: ")[-1].split("-")))
                             if (len(clustertypes) > 1) and ("plant" in clustertypes):
                                 clustertypes.remove("plant")
                             elif clustertypes == ["plant"]:
@@ -1214,7 +1236,8 @@ def run_analyses(seq_record, options, plugins):
     if len(utils.get_cluster_features(seq_record)) > 0:
         # Run smCOG analysis
         if options.smcogs:
-            utils.log_status("Detecting smCOGs for contig #%d" % options.record_idx)
+            utils.log_status("Detecting smCOGs for contig #%d" %
+                             options.record_idx)
             smcogs.run_smcog_analysis(seq_record, options)
 
         # Run ClusterBlast
@@ -1353,7 +1376,8 @@ def setup_logging(options):
 def load_detection_plugins():
     "Load available secondary metabolite detection modules"
     logging.info("Loading detection modules")
-    detection_plugins = list(straight.plugin.load("antismash.specific_modules"))
+    detection_plugins = list(
+        straight.plugin.load("antismash.specific_modules"))
 
     logging.info("The following modules were loaded:%s " % (detection_plugins))
     # TODO remove this logging block
@@ -1364,17 +1388,28 @@ def load_detection_plugins():
     return detection_plugins
 
 
+def cmp(q, p):
+    if q == p:
+        return 0
+    elif q > p:
+        return 1
+    else:
+        return -1
+
+
 def load_output_plugins():
     "Load available output formats"
     plugins = list(straight.plugin.load("antismash.output_modules"))
-    plugins.sort(cmp=lambda x, y: cmp(x.priority, y.priority))
+    plugins.sort(key=functools.cmp_to_key(
+        lambda x, y: cmp(x.priority, y.priority)))
     return plugins
 
 
 def load_generic_genome_plugins():
     "Load available output formats"
     plugins = list(straight.plugin.load("antismash.generic_genome_modules"))
-    plugins.sort(cmp=lambda x, y: cmp(x.priority, y.priority))
+    plugins.sort(key=functools.cmp_to_key(
+        lambda x, y: cmp(x.priority, y.priority)))
     return plugins
 
 
@@ -1397,7 +1432,8 @@ def fetch_entries_from_ncbi(efetch_url):
             URLError,
             http.client.HTTPException,
         ):
-            logging.error("Entry fetching from NCBI failed. Waiting for connection...")
+            logging.error(
+                "Entry fetching from NCBI failed. Waiting for connection...")
             time.sleep(5)
     return output
 
@@ -1451,7 +1487,8 @@ def fix_wgs_master_record(seq_record):
             "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id="
         )
         efetch_url = (
-            efetch_url + ",".join(contig_group) + "&rettype=gbwithparts&retmode=text"
+            efetch_url + ",".join(contig_group) +
+            "&rettype=gbwithparts&retmode=text"
         )
         output = fetch_entries_from_ncbi(efetch_url)
         if not len(output) > 5:
@@ -1505,19 +1542,20 @@ def fix_supercontig_record(seq_record):
         efetch_url = (
             "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id="
         )
-        efetch_url = efetch_url + ",".join(contig_group) + "&rettype=fasta&retmode=text"
+        efetch_url = efetch_url + \
+            ",".join(contig_group) + "&rettype=fasta&retmode=text"
         output = fetch_entries_from_ncbi(efetch_url)
         if not len(output) > 5:
             break
         if (
-            "Resource temporarily unavailable" in output[:200]
-            or "<h1>Server Error</h1>" in output[:500]
+            b"Resource temporarily unavailable" in output[:200]
+            or b"<h1>Server Error</h1>" in output[:500]
         ):
             logging.error(
                 "ERROR: NCBI server temporarily unavailable: downloading contigs failed."
             )
             sys.exit(1)
-        sequences = [seq for seq in output.split(">") if len(seq) > 5]
+        sequences = [str(seq,'utf-8') for seq in output.split(b">") if len(seq) > 5]
         for sequence in sequences:
             for contig_acc in contig_group:
                 if contig_acc in sequence.partition("\n")[0]:
@@ -1540,18 +1578,20 @@ def fix_supercontig_record(seq_record):
                 sys.exit(1)
         else:
             accession = (
-                part.partition(":")[0].partition(".")[0].rpartition("complement(")[2]
+                part.partition(":")[0].partition(
+                    ".")[0].rpartition("complement(")[2]
             )
             sequence = contigseqdict[accession]
             if "complement(" in part:
                 sequence = str(Seq(sequence, generic_dna).reverse_complement())
             if ":" in part and ".." in part:
                 seqstart, seqend = (
-                    part.partition(":")[2].replace(")", "").replace("(", "").split("..")
+                    part.partition(":")[2].replace(")", "").replace(
+                        "(", "").split("..")
                 )
                 if int(seqstart) > 0:
                     seqstart = int(seqstart) - 1
-                sequence = sequence[int(seqstart) : int(seqend)]
+                sequence = sequence[int(seqstart): int(seqend)]
             fullsequence += sequence
     # Add compiled sequence to seq_record
     SeqObject = Seq(fullsequence, generic_dna)
@@ -1632,9 +1672,11 @@ def generate_nucl_seq_record(sequences):
             while sequence_id[:8] + "_" + str(x) in cdsnames:
                 x += 1
             cdsfeature.qualifiers["product"] = [sequence_id[:8] + "_" + str(x)]
-            cdsfeature.qualifiers["locus_tag"] = [sequence_id[:8] + "_" + str(x)]
+            cdsfeature.qualifiers["locus_tag"] = [
+                sequence_id[:8] + "_" + str(x)]
             cdsnames.append(sequence_id[:8] + "_" + str(x))
-        cdsfeature.qualifiers["translation"] = [str(sequence.seq).replace(".", "X")]
+        cdsfeature.qualifiers["translation"] = [
+            str(sequence.seq).replace(".", "X")]
         cds_features.append(cdsfeature)
     seq_record.features.extend(cds_features)
     return [seq_record]
@@ -1678,7 +1720,8 @@ def add_seq_record_seq(seq_records):
     for seq_record in seq_records:
         if len(seq_record.seq) == 0:
             seqmax = max(
-                [cds.location.start for cds in utils.get_cds_features(seq_record)]
+                [cds.location.start for cds in utils.get_cds_features(
+                    seq_record)]
                 + [cds.location.end for cds in utils.get_cds_features(seq_record)]
             )
             seq_record.seq = Seq(seqmax * "n")
@@ -1814,7 +1857,8 @@ def parse_input_sequences(options):
             logging.error("Parsing %r failed: %s", filename, e)
             sys.exit(1)
         except Exception as e:
-            logging.error("Parsing %r failed with unhandled exception: %s", filename, e)
+            logging.error(
+                "Parsing %r failed with unhandled exception: %s", filename, e)
             sys.exit(1)
     # Check if seq_records have appropriate content
     i = 0
@@ -1848,7 +1892,8 @@ def parse_input_sequences(options):
             if not isinstance(
                 sequence.seq.alphabet, NucleotideAlphabet
             ) and not is_nucl_seq(sequence.seq):
-                logging.error("Record %s is a protein record, skipping.", sequence.id)
+                logging.error(
+                    "Record %s is a protein record, skipping.", sequence.id)
                 continue
             if sequence.seq.alphabet != generic_dna:
                 sequence.seq.alphabet = generic_dna
@@ -1921,7 +1966,8 @@ def parse_input_sequences(options):
                 ):  # sequence is covered in provided gff, skip genefinding
                     continue
             if len(concat_seq_text) > 1:
-                concat_seq_text += "TGA-TGA--TGA"  # 3-frames stop codon to prevent cross-contig gene prediction
+                # 3-frames stop codon to prevent cross-contig gene prediction
+                concat_seq_text += "TGA-TGA--TGA"
                 for ix in range(0, 30):  # create gaps to separate between contigs
                     concat_seq_text += "-"
             s_pos = len(concat_seq_text)
@@ -2044,7 +2090,8 @@ def parse_input_sequences(options):
             gene_id = prefix + utils.get_gene_id(feature)
             fasta_seq = feature.qualifiers["translation"][0]
             if "-" in str(fasta_seq):
-                fasta_seq = Seq(str(fasta_seq).replace("-", ""), generic_protein)
+                fasta_seq = Seq(str(fasta_seq).replace(
+                    "-", ""), generic_protein)
             if len(fasta_seq) == 0:
                 continue
             if cur_count < schunk_size:
@@ -2071,7 +2118,8 @@ def parse_input_sequences(options):
                             if hsp.bitscore > sig[2]:
                                 if len(sig[0].split("/")) > 1:
                                     hsp.query_id = (
-                                        sig[0].split("/")[0] + "/" + hsp.query_id
+                                        sig[0].split("/")[0] +
+                                        "/" + hsp.query_id
                                     )
                                 if hsp.hit_id not in results_by_id:
                                     results_by_id[hsp.hit_id] = [hsp]
@@ -2090,7 +2138,8 @@ def parse_input_sequences(options):
             runresults = utils.run_hmmsearch(
                 utils.get_full_path(
                     __file__,
-                    path.join("antismash", "generic_modules", "hmm_detection", sig[3]),
+                    path.join("antismash", "generic_modules",
+                              "hmm_detection", sig[3]),
                 ),
                 full_fasta,
                 sig[2],
@@ -2100,7 +2149,8 @@ def parse_input_sequences(options):
                 for hsp in runresult.hsps:
                     if hsp.bitscore > sig[2]:
                         if len(sig[0].split("/")) > 1:
-                            hsp.query_id = sig[0].split("/")[0] + "/" + hsp.query_id
+                            hsp.query_id = sig[0].split(
+                                "/")[0] + "/" + hsp.query_id
                         if hsp.hit_id not in results_by_id:
                             results_by_id[hsp.hit_id] = [hsp]
                         else:
@@ -2147,7 +2197,7 @@ def parse_input_sequences(options):
                     len(sequence),
                 )
                 sys.exit(1)
-            sequence = sequence[options.start - 1 :]
+            sequence = sequence[options.start - 1:]
             # new sequence is shorter, so fix the end calculation
             options.end -= options.start
             sequences[i] = sequence

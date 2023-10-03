@@ -11,6 +11,7 @@
 #
 # License: GNU Affero General Public License v3 or later
 # A copy of GNU AGPL v3 should have been included in this software package in LICENSE.txt.
+import functools
 
 
 def purifydomainlist(domainlist, hmmlengthsdict):
@@ -50,7 +51,8 @@ def mergedomainlist(domainlist, hmmlengthsdict):
         if (
             i[0] == domainlist2[-1][0]
             and (
-                alilength1 < (0.75 * domainlength) or alilength2 < (0.75 * domainlength)
+                alilength1 < (
+                    0.75 * domainlength) or alilength2 < (0.75 * domainlength)
             )
             and (alilength1 + alilength2) < (1.5 * domainlength)
         ):
@@ -89,7 +91,7 @@ def parse_hmmscan_results(hmmscan_results, hmmlengthsdict):
                     result.bitscore,
                 ]
             )
-        domainlist.sort(lambda a, b: cmp(a[1], b[1]))
+        domainlist.sort(key=lambda x: x[1])
         # Only keep best hits for overlapping domains
         if len(domainlist) > 1:
             domainlist = purifydomainlist(domainlist, hmmlengthsdict)

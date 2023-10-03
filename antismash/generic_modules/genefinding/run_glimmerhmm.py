@@ -39,23 +39,24 @@ def run_glimmerhmm(seq_record, options):
         result_file = "%s.predict" % name
         with open(fasta_file, "w") as handle:
             seqio.write([seq_record], handle, "fasta")
-        glimmerhmm = ["glimmerhmm"]
+        glimmerhmm = [b"glimmerhmm"]
         glimmerhmm.extend(
             [
-                fasta_file,
-                utils.get_full_path(
-                    __file__, "train_%s" % options.glimmerhmm_train_folder
-                ),
-                "-g",
+                bytes(fasta_file, 'utf-8'),
+                bytes(utils.get_full_path(
+                    __file__,
+                    f"train_{options.glimmerhmm_train_folder}"
+                ), 'utf-8'),
+                b"-g",
             ]
         )
         out, err, retcode = execute(glimmerhmm)
-        if err.find("ERROR") > -1:
+        if err.find(b"ERROR") > -1:
             logging.error("Failed to run GlimmerHMM: %r" % err)
             return
 
         # Parse GlimmerHMM predictions
-        resultstext = out
+        resultstext = str(out, 'utf-8')
         if "CDS" not in resultstext:
             logging.error("GlimmerHMM gene prediction failed: no genes found.")
         resultstext = resultstext.replace("\r", " ")
@@ -141,7 +142,8 @@ def run_glimmerhmm(seq_record, options):
                 gstart, gend = min(genepositions[0]), max(genepositions[-1])
                 sublocations = []
                 for exonstart, exonend in genepositions:
-                    exonloc = FeatureLocation(exonstart, exonend, strand=bpy_strand)
+                    exonloc = FeatureLocation(
+                        exonstart, exonend, strand=bpy_strand)
                     sublocations.append(exonloc)
                 loc = CompoundLocation(sublocations)
                 feature = SeqFeature(

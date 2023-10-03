@@ -45,18 +45,21 @@ def run_glimmer(seq_record, options):
             seqio.write([seq_record], handle, "fasta")
         long_orfs = [path.join(basedir, "long-orfs")]
         long_orfs.extend(
-            ["-l", "-n", "-t", "1.15", "--trans_table", "11", fasta_file, longorfs_file]
+            ["-l", "-n", "-t", "1.15", "--trans_table",
+                "11", fasta_file, longorfs_file]
         )
         out, err, retcode = execute(long_orfs)
-        if err.find("ERROR") > -1:
+        if err.find(b"ERROR") > -1:
             logging.error("Locating long orfs failed: %r" % err)
             return
 
         # run extract
-        extract = [path.join(basedir, "extract"), "-t", fasta_file, longorfs_file]
+        extract = [path.join(basedir, "extract"), "-t",
+                   fasta_file, longorfs_file]
         out, err, retcode = execute(extract)
         if out == "":
-            logging.error("Failed to extract genes from model, aborting: %r" % err)
+            logging.error(
+                "Failed to extract genes from model, aborting: %r" % err)
             return
 
         build_icm = [path.join(basedir, "build-icm"), "-r", icm_file]
@@ -102,7 +105,8 @@ def run_glimmer(seq_record, options):
                 end = int(end)
                 strand = int(strand)
             except ValueError:
-                logging.error("Malformatted glimmer output line %r" % line.rstrip())
+                logging.error("Malformatted glimmer output line %r" %
+                              line.rstrip())
 
             if start > end:
                 bpy_strand = -1

@@ -1,11 +1,10 @@
 import os
-import Bio
 
-# import seqparse as sp
-# import IO.utils as ut
+from Bio import seqparse as sp
+from Bio.IO import utils as ut
 from . import scorer as sc
 
-# import IO.output_repeatfinder as output
+from Bio.IO import output_repeatfinder as output
 from . import Classifier
 
 
@@ -56,7 +55,7 @@ def run_fbk(seq_record):
                         feat.qualifiers["has_repeat"] = False
                         del feat.qualifiers["pattern"]
 
-                    # output.add_html_output(seq_record)
+                    output.add_html_output(seq_record)
 
 
 def assess_cluster(seq_record):
@@ -85,7 +84,7 @@ def scan_seqfeature_translation(seq_record, feature, k=3):
         seq = ut.get_aa_translation(seq_record, feature)
 
     for i in range(len(seq) - k):
-        word = str(seq[i : i + k])
+        word = str(seq[i: i + k])
         if word in kmer_dict:
             kmer_dict[word].append(i)
 
@@ -212,7 +211,8 @@ def make_pattern(feat):
 def mass_run(in_path, out_path, output_type="txt", teiresias=False):
     output_folder_name = "/results"
     filepath_list = sp.make_filepath_list(in_path)
-    outpath_list = sp.generate_outpath_list(filepath_list, out_path, output_folder_name)
+    outpath_list = sp.generate_outpath_list(
+        filepath_list, out_path, output_folder_name)
 
     run_fbk_per_cluster(filepath_list, outpath_list, output_type, teiresias)
 
@@ -234,7 +234,8 @@ def run_fbk_per_cluster(
         # summary_file = open("/".join(outpath_list[i].split("/")[:-1])+ "/output_summary.txt","a")
         if output_type == "html":
             out_file = open(outpath_list[i] + "/fbk_output.html", "w+")
-            out_file.write("Cluster found in organism %s \n" % (fp.split("/")[-1]))
+            out_file.write("Cluster found in organism %s \n" %
+                           (fp.split("/")[-1]))
             if "html_output" in seq_record.annotations:
                 out_file.write("<br>" + seq_record.annotations["html_output"])
             for feature in seq_record.features:
