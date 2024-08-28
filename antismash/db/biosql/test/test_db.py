@@ -12,31 +12,38 @@ from argparse import Namespace
 from minimock import mock, restore, TraceTracker, assert_same_trace
 from Bio import SeqIO
 from BioSQL import BioSeqDatabase
+
 skip_db_tests = False
 try:
     from antismash.db import biosql as db
 except ImportError:
     skip_db_tests = True
 
+
 @unittest2.skipIf(skip_db_tests, "Skipping DB-related tests")
 class TestBasicDBconnection(unittest2.TestCase):
     "Test connection to database"
+
     def setUp(self):
         "set up database test framework and test for db connection"
         self.options = Namespace()
         self.options.BioSQLconfig = Namespace()
-        self.options.BioSQLconfig.dbdriver = 'psycopg2'
-        self.options.BioSQLconfig.dbuser = 'biosql'
-        self.options.BioSQLconfig.dbpass = 'biosql'
-        self.options.BioSQLconfig.dbhost = 'localhost'
-        self.options.BioSQLconfig.dbport = '5432'
-        self.options.BioSQLconfig.dbdb = 'antiSMASHnosetest'
-        self.options.BioSQLnamespace = 'test'
+        self.options.BioSQLconfig.dbdriver = "psycopg2"
+        self.options.BioSQLconfig.dbuser = "biosql"
+        self.options.BioSQLconfig.dbpass = "biosql"
+        self.options.BioSQLconfig.dbhost = "localhost"
+        self.options.BioSQLconfig.dbport = "5432"
+        self.options.BioSQLconfig.dbdb = "antiSMASHnosetest"
+        self.options.BioSQLnamespace = "test"
 
         self.trace_tracker = TraceTracker()
 
         # test correct method call for db.asDB)()
-        mock('BioSeqDatabase.open_database', tracker=self.trace_tracker, returns=['mock result'])
+        mock(
+            "BioSeqDatabase.open_database",
+            tracker=self.trace_tracker,
+            returns=["mock result"],
+        )
 
         expected = """Called BioSeqDatabase.open_database(
         db='antiSMASHnosetest',
@@ -54,15 +61,16 @@ class TestBasicDBconnection(unittest2.TestCase):
         restore()
         self.trace_tracker = TraceTracker()
 
-        #test initializing database object db.__init__"
+        # test initializing database object db.__init__"
 
         try:
             mydb = db.aSDB(self.options)
         except Exception:
-            self.skipTest('database connection could not be established, skipping tests')
+            self.skipTest(
+                "database connection could not be established, skipping tests"
+            )
 
         self.assertIsInstance(mydb, db.aSDB)
-
 
         self.mydb = mydb
 
@@ -71,13 +79,19 @@ class TestBasicDBconnection(unittest2.TestCase):
 
         mydb = db.aSDB(self.options)
 
-        mock('BioSeqDatabase.DBServer.new_database', tracker=self.trace_tracker, returns=["mock result"])
+        mock(
+            "BioSeqDatabase.DBServer.new_database",
+            tracker=self.trace_tracker,
+            returns=["mock result"],
+        )
         expected = """Called BioSeqDatabase.DBServer.new_database(
         db_name='test',
         description='test namespace for nosetests')
         """
 
-        mydb.generate_namespace(self.options.BioSQLnamespace, 'test namespace for nosetests')
+        mydb.generate_namespace(
+            self.options.BioSQLnamespace, "test namespace for nosetests"
+        )
         assert_same_trace(self.trace_tracker, expected)
 
 
@@ -88,27 +102,29 @@ class TestDBAccess(unittest2.TestCase):
         # restore all mocked methods
         restore()
 
-        #Open testfile and parse it with Biopython
+        # Open testfile and parse it with Biopython
         testfile = path.join(path.dirname(__file__), "AAA26493.embl")
-        testfile_fh = open(testfile, "rU")
-        self.seq_record = SeqIO.read(testfile_fh, 'embl')
+        testfile_fh = open(testfile, "r")
+        self.seq_record = SeqIO.read(testfile_fh, "embl")
 
         self.options = Namespace()
         self.options.BioSQLconfig = Namespace()
-        self.options.BioSQLconfig.dbdriver = 'psycopg2'
-        self.options.BioSQLconfig.dbuser = 'biosql'
-        self.options.BioSQLconfig.dbpass = 'biosql'
-        self.options.BioSQLconfig.dbhost = 'localhost'
-        self.options.BioSQLconfig.dbport = '5432'
-        self.options.BioSQLconfig.dbdb = 'antiSMASHnosetest'
-        self.options.BioSQLnamespace = 'test'
+        self.options.BioSQLconfig.dbdriver = "psycopg2"
+        self.options.BioSQLconfig.dbuser = "biosql"
+        self.options.BioSQLconfig.dbpass = "biosql"
+        self.options.BioSQLconfig.dbhost = "localhost"
+        self.options.BioSQLconfig.dbport = "5432"
+        self.options.BioSQLconfig.dbdb = "antiSMASHnosetest"
+        self.options.BioSQLnamespace = "test"
 
         self.trace_tracker = TraceTracker()
 
         try:
             mydb = db.aSDB(self.options)
         except Exception:
-            self.skipTest('database connection could not be established, skipping tests')
+            self.skipTest(
+                "database connection could not be established, skipping tests"
+            )
 
         try:
             del mydb.server[self.options.BioSQLnamespace]
@@ -116,7 +132,9 @@ class TestDBAccess(unittest2.TestCase):
         except Exception:
             pass
 
-        mydb.generate_namespace(self.options.BioSQLnamespace, 'test namespace for nosetests')
+        mydb.generate_namespace(
+            self.options.BioSQLnamespace, "test namespace for nosetests"
+        )
         mydb.commit()
 
         mydb.connect(self.options.BioSQLnamespace)
@@ -143,31 +161,35 @@ class TestDBAccess(unittest2.TestCase):
 
         self.assertEqual(mydb.get_current_namespace(), self.options.BioSQLnamespace)
 
-
-
     def test_commit(self):
         "test commit method"
 
         mydb = self.mydb
 
-        mock('BioSeqDatabase.DBServer.commit', tracker=self.trace_tracker, returns=["mock result"])
+        mock(
+            "BioSeqDatabase.DBServer.commit",
+            tracker=self.trace_tracker,
+            returns=["mock result"],
+        )
 
         mydb.commit()
         expected = "Called BioSeqDatabase.DBServer.commit()"
         assert_same_trace(self.trace_tracker, expected)
-        
-        
+
     def test_rollback(self):
         "test rollback method"
-        
-        mydb = self.mydb
-        
-        mock('BioSeqDatabase.DBServer.rollback', tracker=self.trace_tracker, returns=["mock result"])
-        
-        mydb.rollback()
-        expected = 'Called BioSeqDatabase.DBServer.rollback()'
-        assert_same_trace(self.trace_tracker, expected)
 
+        mydb = self.mydb
+
+        mock(
+            "BioSeqDatabase.DBServer.rollback",
+            tracker=self.trace_tracker,
+            returns=["mock result"],
+        )
+
+        mydb.rollback()
+        expected = "Called BioSeqDatabase.DBServer.rollback()"
+        assert_same_trace(self.trace_tracker, expected)
 
     def test_database_operations(self):
         "Test for methods: load_records(), fetch_entryid_by_name(), get_record_by_name(); delete()"
@@ -176,10 +198,14 @@ class TestDBAccess(unittest2.TestCase):
 
         mydb = self.mydb
 
-        mock('BioSeqDatabase.BioSeqDatabase.load', tracker=self.trace_tracker, returns=["mock result"])
+        mock(
+            "BioSeqDatabase.BioSeqDatabase.load",
+            tracker=self.trace_tracker,
+            returns=["mock result"],
+        )
 
         rec_no = mydb.load_records([self.seq_record])
-        self.assertListEqual(rec_no, ['mock result'])
+        self.assertListEqual(rec_no, ["mock result"])
 
         expected = """Called BioSeqDatabase.BioSeqDatabase.load(
         [SeqRecord(seq=Seq('GTGTCGGGGCCGCGCTCGCGCACGACGAGCAGGCGGACGCCGGTCCGCATCGGC...TGA', IUPACAmbiguousDNA()), id='AAA26493.1', name='AAA26493', description='Saccharopolyspora erythraea EryA', dbxrefs=[])])
@@ -195,11 +221,18 @@ class TestDBAccess(unittest2.TestCase):
         commit_res = mydb.commit()
         self.assertIsNone(commit_res)
 
-        mock('BioSeqDatabase.Adaptor.fetch_dbid_by_dbname', tracker=self.trace_tracker, returns=1234)
-        mock('BioSeqDatabase.Adaptor.fetch_seqid_by_display_id', tracker=self.trace_tracker, returns=4321)
+        mock(
+            "BioSeqDatabase.Adaptor.fetch_dbid_by_dbname",
+            tracker=self.trace_tracker,
+            returns=1234,
+        )
+        mock(
+            "BioSeqDatabase.Adaptor.fetch_seqid_by_display_id",
+            tracker=self.trace_tracker,
+            returns=4321,
+        )
 
-        db_seq_rec_id = mydb.fetch_entryid_by_name('testname')
-
+        db_seq_rec_id = mydb.fetch_entryid_by_name("testname")
 
         expected = """Called BioSeqDatabase.Adaptor.fetch_dbid_by_dbname('test')
 Called BioSeqDatabase.Adaptor.fetch_seqid_by_display_id(
@@ -212,25 +245,29 @@ Called BioSeqDatabase.Adaptor.fetch_seqid_by_display_id(
         self.trace_tracker = TraceTracker()
 
         # database record does not exist, should deliver None
-        db_seq_rec_id = mydb.fetch_entryid_by_name('test')
+        db_seq_rec_id = mydb.fetch_entryid_by_name("test")
         self.assertIsNone(db_seq_rec_id)
 
-        db_seq_rec_id = mydb.fetch_entryid_by_name('AAA26493')
+        db_seq_rec_id = mydb.fetch_entryid_by_name("AAA26493")
         self.assertIsInstance(db_seq_rec_id, int)
 
         # retrieve entry from database
 
-        mock('BioSeqDatabase.BioSeqDatabase.lookup', tracker=self.trace_tracker, returns=['mock results'])
-        myrecord = mydb.get_record_by_name('AAA26493')
+        mock(
+            "BioSeqDatabase.BioSeqDatabase.lookup",
+            tracker=self.trace_tracker,
+            returns=["mock results"],
+        )
+        myrecord = mydb.get_record_by_name("AAA26493")
 
-        self.assertListEqual(myrecord, ['mock results'])
+        self.assertListEqual(myrecord, ["mock results"])
 
         expected = "Called BioSeqDatabase.BioSeqDatabase.lookup(name='AAA26493')"
         assert_same_trace(self.trace_tracker, expected)
         restore()
         self.trace_tracker = TraceTracker()
 
-        myrecord = mydb.get_record_by_name('AAA26493')
+        myrecord = mydb.get_record_by_name("AAA26493")
         myrecord_class = myrecord.__class__.__name__
 
         self.assertEqual(myrecord_class, "DBSeqRecord")
@@ -239,11 +276,15 @@ Called BioSeqDatabase.Adaptor.fetch_seqid_by_display_id(
         self.assertEqual(myrecord.id, self.seq_record.id)
         self.assertEqual(myrecord.name, self.seq_record.name)
 
-        myrecord = mydb.get_record_by_name('Idonotexist')
+        myrecord = mydb.get_record_by_name("Idonotexist")
         self.assertIsNone(myrecord)
 
         # test delete method
-        mock('BioSeqDatabase.BioSeqDatabase.__delitem__', tracker=self.trace_tracker, returns=['mock results'])
+        mock(
+            "BioSeqDatabase.BioSeqDatabase.__delitem__",
+            tracker=self.trace_tracker,
+            returns=["mock results"],
+        )
 
         mydb.delete(db_seq_rec_id)
         expected = "Called BioSeqDatabase.BioSeqDatabase.__delitem__(...)"
@@ -251,8 +292,11 @@ Called BioSeqDatabase.Adaptor.fetch_seqid_by_display_id(
         restore()
 
         mydb.delete(db_seq_rec_id)
-        db_seq_rec_id = mydb.fetch_entryid_by_name('AAA26493')
-        self.assertIsNone(db_seq_rec_id, 'Entry %s still present in database' % db_seq_rec_id)
+        db_seq_rec_id = mydb.fetch_entryid_by_name("AAA26493")
+        self.assertIsNone(
+            db_seq_rec_id, "Entry %s still present in database" % db_seq_rec_id
+        )
+
 
 class Test_get_functions(unittest2.TestCase):
     "Test get_record and get_records functions of antismash.db module"
@@ -262,30 +306,32 @@ class Test_get_functions(unittest2.TestCase):
         # restore all mocked methods
         restore()
 
-        #Open testfile and parse it with Biopython
+        # Open testfile and parse it with Biopython
         testfile = path.join(path.dirname(__file__), "AAA26493.embl")
-        testfile_fh = open(testfile, "rU")
-        self.seq_record = SeqIO.read(testfile_fh, 'embl')
+        testfile_fh = open(testfile, "r")
+        self.seq_record = SeqIO.read(testfile_fh, "embl")
 
         self.options = Namespace()
         self.options.BioSQLconfig = Namespace()
-        self.options.BioSQLconfig.dbdriver = 'psycopg2'
-        self.options.BioSQLconfig.dbuser = 'biosql'
-        self.options.BioSQLconfig.dbpass = 'biosql'
-        self.options.BioSQLconfig.dbhost = 'localhost'
-        self.options.BioSQLconfig.dbport = '5432'
-        self.options.BioSQLconfig.dbdb = 'antiSMASHnosetest'
-        self.options.BioSQLnamespace = 'test'
+        self.options.BioSQLconfig.dbdriver = "psycopg2"
+        self.options.BioSQLconfig.dbuser = "biosql"
+        self.options.BioSQLconfig.dbpass = "biosql"
+        self.options.BioSQLconfig.dbhost = "localhost"
+        self.options.BioSQLconfig.dbport = "5432"
+        self.options.BioSQLconfig.dbdb = "antiSMASHnosetest"
+        self.options.BioSQLnamespace = "test"
         self.options.dbnamespace = self.options.BioSQLnamespace
         self.trace_tracker = TraceTracker()
 
         try:
             mydb = db.aSDB(self.options)
         except Exception:
-            self.skipTest('database connection could not be established, skipping tests')
+            self.skipTest(
+                "database connection could not be established, skipping tests"
+            )
 
         if not mydb:
-            self.skipTest('database connection impossible; skipping tests')
+            self.skipTest("database connection impossible; skipping tests")
 
         try:
             del mydb.server[self.options.BioSQLnamespace]
@@ -293,7 +339,9 @@ class Test_get_functions(unittest2.TestCase):
         except Exception:
             pass
 
-        mydb.generate_namespace(self.options.BioSQLnamespace, 'test namespace for nosetests')
+        mydb.generate_namespace(
+            self.options.BioSQLnamespace, "test namespace for nosetests"
+        )
 
         mydb.connect(self.options.BioSQLnamespace)
 
@@ -309,17 +357,21 @@ class Test_get_functions(unittest2.TestCase):
         "Test get_record() function"
 
         Fake_seq_rec = Namespace()
-        Fake_seq_rec.name = 'fakedName'
+        Fake_seq_rec.name = "fakedName"
 
-        mock('db.aSDB.get_record_by_name', tracker=self.trace_tracker, returns=Fake_seq_rec)
+        mock(
+            "db.aSDB.get_record_by_name",
+            tracker=self.trace_tracker,
+            returns=Fake_seq_rec,
+        )
 
-        db_seq_rec = db.get_record('AAA26493', self.options)
+        db_seq_rec = db.get_record("AAA26493", self.options)
         expected = "Called db.aSDB.get_record_by_name('AAA26493')"
         assert_same_trace(self.trace_tracker, expected)
         restore()
         self.trace_tracker = TraceTracker()
 
-        db_seq_rec = db.get_record('AAA26493', self.options)
+        db_seq_rec = db.get_record("AAA26493", self.options)
         myrecord_class = db_seq_rec.__class__.__name__
 
         self.assertEqual(myrecord_class, "DBSeqRecord")
@@ -330,7 +382,7 @@ class Test_get_functions(unittest2.TestCase):
     def test_get_records(self):
         "Test get_records() function"
 
-        self.options.seq_ids = ['AAA26493', 'AAA26493']
+        self.options.seq_ids = ["AAA26493", "AAA26493"]
 
         mydbrecords = db.get_records(self.options)
         self.assertEqual(len(mydbrecords), 2)

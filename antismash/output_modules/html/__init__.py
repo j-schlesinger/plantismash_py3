@@ -20,23 +20,27 @@ from os import path
 import shutil
 from antismash.output_modules.html.generator import generate_webpage
 from antismash import utils
-from antismash.output_modules.html.structure_drawer import generate_chemical_structure_preds
+from antismash.output_modules.html.structure_drawer import (
+    generate_chemical_structure_preds,
+)
 
 name = "html"
 short_description = "HTML output"
 priority = 9999
 
+
 def write(seq_records, options):
     output_dir = options.outputfoldername
     logging.debug("Writing seq_records to %r" % output_dir)
 
-    copy_template_dir('css', output_dir)
-    copy_template_dir('js', output_dir)
-    copy_template_dir('images', output_dir)
+    copy_template_dir("css", output_dir)
+    copy_template_dir("js", output_dir)
+    copy_template_dir("images", output_dir)
 
     # Generate structure images for records obtained from BioSQL
     generate_structure_images(seq_records, options)
     generate_webpage(seq_records, options)
+
 
 def copy_template_dir(template, output_dir):
     "Copy files from a template directory to the output directory"
@@ -47,20 +51,23 @@ def copy_template_dir(template, output_dir):
         shutil.rmtree(target_dir)
     shutil.copytree(path.join(basedir, template), target_dir)
 
+
 def generate_structure_images(seq_records, options):
     "Generate the structure images based on Monomers prediction in cluster feature"
-    
+
     for seq_record in seq_records:
         # Ugly temporary solution:
         # At first we have to regenerate the relevant information for the pksnrpsvars dictionary from the seq_record file
         pksnrpsvars = utils.Storage()
         pksnrpsvars.compound_pred_dict = {}
         pksnrpsvars.failedstructures = []
-        
+
         geneclusters = utils.get_cluster_features(seq_record)
-        
+
         for genecluster in geneclusters:
             geneclusternr = utils.get_cluster_number(genecluster)
-            pksnrpsvars.compound_pred_dict[geneclusternr] = utils.get_structure_pred(genecluster)
+            pksnrpsvars.compound_pred_dict[geneclusternr] = utils.get_structure_pred(
+                genecluster
+            )
         if len(pksnrpsvars.compound_pred_dict) > 0:
             generate_chemical_structure_preds(pksnrpsvars, seq_record, options)

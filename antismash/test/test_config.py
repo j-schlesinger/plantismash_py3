@@ -25,16 +25,16 @@ class TestConfig(unittest2.TestCase):
     def test_load_config(self):
         "Test config.load_config()"
         config._basedir = path.dirname(__file__)
-        config._default_name = 'test.cfg'
-        config._sys_name = 'test_sys.cfg'
-        config._user_file_name = path.join(config._basedir, 'test_user.cfg')
+        config._default_name = "test.cfg"
+        config._sys_name = "test_sys.cfg"
+        config._user_file_name = path.join(config._basedir, "test_user.cfg")
         c = Namespace(testing=True)
         config.load_config(c)
         self.assertTrue(c.testing)
-        self.assertEqual('true', c.default_file_loaded)
-        self.assertEqual('true', c.sublevel.exists)
-        self.assertEqual('true', c.sys_file_loaded)
-        self.assertEqual('true', c.user_file_loaded)
+        self.assertEqual("true", c.default_file_loaded)
+        self.assertEqual("true", c.sublevel.exists)
+        self.assertEqual("true", c.sys_file_loaded)
+        self.assertEqual("true", c.user_file_loaded)
 
     def test_set_config(self):
         "Test config.set_config()"

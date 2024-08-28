@@ -11,18 +11,23 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import generic_dna
 
+
 def _create_dummy_record():
-    seq = Seq('GTGGAGCGGTACTAAATGTACTCCACTATCTGCTGATTGGAAACCACGGAGCGCTCTTAG',
-              generic_dna)
+    seq = Seq(
+        "GTGGAGCGGTACTAAATGTACTCCACTATCTGCTGATTGGAAACCACGGAGCGCTCTTAG", generic_dna
+    )
 
     rec = SeqRecord(seq, id="FAKE")
 
-    locations = (FeatureLocation(0,15, strand=1), FeatureLocation(15,36, strand=1),
-                 FeatureLocation(36,60, strand=1))
+    locations = (
+        FeatureLocation(0, 15, strand=1),
+        FeatureLocation(15, 36, strand=1),
+        FeatureLocation(36, 60, strand=1),
+    )
     idx = 1
     for loc in locations:
-        f = SeqFeature(loc, type='CDS')
-        f.qualifiers['locus_tag'] = ['orf%04d' % idx]
+        f = SeqFeature(loc, type="CDS")
+        f.qualifiers["locus_tag"] = ["orf%04d" % idx]
         rec.features.append(f)
         idx += 1
 
@@ -39,19 +44,23 @@ def _create_dummy_results():
     pass
 
 
-
 class TestFullhmmer(unittest2.TestCase):
     def setUp(self):
-        f_config = Namespace(score='1', evalue='0.02')
+        f_config = Namespace(score="1", evalue="0.02")
         self.config = Namespace(fullhmmer=f_config)
         self.tt = TraceTracker()
-        mock('antismash.utils.locate_executable', returns='hmmsearch',
-             tracker=self.tt)
-        self.file_list = ['Pfam-A.hmm', 'Pfam-A.hmm.h3f', 'Pfam-A.hmm.h3i',
-                          'Pfam-A.hmm.h3m', 'Pfam-A.hmm.h3p']
-        mock('antismash.utils.locate_file', returns_iter=self.file_list,
-             tracker=self.tt)
-        mock('antismash.utils.run_hmmscan', returns=[])
+        mock("antismash.utils.locate_executable", returns="hmmsearch", tracker=self.tt)
+        self.file_list = [
+            "Pfam-A.hmm",
+            "Pfam-A.hmm.h3f",
+            "Pfam-A.hmm.h3i",
+            "Pfam-A.hmm.h3m",
+            "Pfam-A.hmm.h3p",
+        ]
+        mock(
+            "antismash.utils.locate_file", returns_iter=self.file_list, tracker=self.tt
+        )
+        mock("antismash.utils.run_hmmscan", returns=[])
 
     def tearDown(self):
         restore()
@@ -76,7 +85,6 @@ class TestFullhmmer(unittest2.TestCase):
         self.assertListEqual(expected, returned)
         assert_same_trace(self.tt, trace)
 
-
     def test_check_prereqs_missing_exe(self):
         "Test fullhmmer.check_prereqs() with a missing executable"
         config = Namespace()
@@ -97,7 +105,6 @@ class TestFullhmmer(unittest2.TestCase):
 
         self.assertListEqual(expected, returned)
         assert_same_trace(self.tt, trace)
-
 
     def test_check_prereqs_missing_file(self):
         "Test fullhmmer.check_prereqs() with a missing file"
@@ -121,7 +128,6 @@ class TestFullhmmer(unittest2.TestCase):
         self.assertListEqual(expected, returned)
         assert_same_trace(self.tt, trace)
 
-
     def test_min_score(self):
         "Test fullhmmer._min_score()"
         self.assertAlmostEqual(1, fullhmmer._min_score(self.config))
@@ -131,7 +137,6 @@ class TestFullhmmer(unittest2.TestCase):
         "Test fullhmmer._max_evalue()"
         self.assertAlmostEqual(0.02, fullhmmer._max_evalue(self.config))
         self.assertAlmostEqual(0.01, fullhmmer._max_evalue(Namespace()))
-
 
     def test_calculate_start_end(self):
         "Test fullhmmer._calculate_start_end()"
@@ -146,4 +151,6 @@ class TestFullhmmer(unittest2.TestCase):
         feature = rev.features[1]
         start, end = fullhmmer._calculate_start_end(feature, hsp)
         self.assertEqual((30, 42), (start, end))
-        self.assertEqual("YSTI", str(rev.seq[start:end].reverse_complement().translate()))
+        self.assertEqual(
+            "YSTI", str(rev.seq[start:end].reverse_complement().translate())
+        )

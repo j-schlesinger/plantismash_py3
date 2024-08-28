@@ -20,12 +20,13 @@ import os
 from os import path
 import shutil
 from antismash import utils
-from data_loading import prepare_visualization
-from svg_drawer import create_svgs
+from .data_loading import prepare_visualization
+from .svg_drawer import create_svgs
 
 name = "svg"
 short_description = "SVG output"
 priority = 1
+
 
 def write(seq_records, options):
     basename = options.outputfoldername
@@ -35,8 +36,6 @@ def write(seq_records, options):
         os.mkdir(options.svgdir)
     for seq_record in seq_records:
         if len(utils.get_cluster_features(seq_record)) > 0:
-            #Parse clusterblast output to prepare visualization
+            # Parse clusterblast output to prepare visualization
             prepare_visualization(options, seq_record)
             create_svgs(options, seq_record)
-
-

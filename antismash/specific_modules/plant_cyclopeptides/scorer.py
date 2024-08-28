@@ -5,7 +5,7 @@ Author:
 
 Description: this is a script to ...
 """
-#import statements here
+# import statements here
 
 # functions between here and __main__
 blosum = """
@@ -43,6 +43,7 @@ blosum = """
    * -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4 -4  1 
 """
 
+
 def blosum62():
     """Return order and similarity scores from BLOSUM62 matrix
 
@@ -51,8 +52,8 @@ def blosum62():
     """
     order = {}
     blosum_matrix = []
-    for line in blosum.split('\n'):
-        if line.startswith('#'):
+    for line in blosum.split("\n"):
+        if line.startswith("#"):
             continue
         if not line.strip():
             continue
@@ -62,14 +63,16 @@ def blosum62():
                 order[sym] = idx
         else:
             # list around the map construction for python3 compatibility
-            blosum_matrix.append(list(map(int,parts[1:])))
+            blosum_matrix.append(list(map(int, parts[1:])))
     return order, blosum_matrix
+
 
 BLOSUM62_ORDER, BLOSUM62_MATRIX = blosum62()
 
+
 def score(res1, res2, BLOSUM62_ORDER, BLOSUM62_MATRIX):
     """Return similarity score from BLOSUM62 matrix for two residues
-    
+
     res1: string, amino acid
     res2: string, amino acid
     """
@@ -77,11 +80,22 @@ def score(res1, res2, BLOSUM62_ORDER, BLOSUM62_MATRIX):
     lookup2 = BLOSUM62_ORDER[res2]
     return BLOSUM62_MATRIX[lookup1][lookup2]
 
+
 # write your own functions below here
 
-def decide_score(input_matrix,x,y,seq1,seq2,endgap_bool = False,gap_penalty = -8,end_gap_penalty = -8): #the gap penalty function
+
+def decide_score(
+    input_matrix,
+    x,
+    y,
+    seq1,
+    seq2,
+    endgap_bool=False,
+    gap_penalty=-8,
+    end_gap_penalty=-8,
+):  # the gap penalty function
     """Return similarity score and optimal route direction
-    
+
     input_matrix: 2d array, score matrix
     x,y: int, coordinates
     seq1,seq2: string, the strings whose residues are scored
@@ -92,24 +106,24 @@ def decide_score(input_matrix,x,y,seq1,seq2,endgap_bool = False,gap_penalty = -8
 
     if endgap_bool:
         return end_gap_penalty
-    
-    ho = input_matrix[y][x-1] + gap_penalty #horizontal
 
-    ve =  input_matrix[y-1][x] + gap_penalty #vertical
-        
-    di =  input_matrix[y-1][x-1] + score(seq1[y-1],seq2[x-1]) #diagonal
-    
-    if max(di,ho,ve) == di:
-        return di,'di'
-    elif max(di,ho,ve) == ho:
-        return ho,'ho'
+    ho = input_matrix[y][x - 1] + gap_penalty  # horizontal
+
+    ve = input_matrix[y - 1][x] + gap_penalty  # vertical
+
+    di = input_matrix[y - 1][x - 1] + score(seq1[y - 1], seq2[x - 1])  # diagonal
+
+    if max(di, ho, ve) == di:
+        return di, "di"
+    elif max(di, ho, ve) == ho:
+        return ho, "ho"
     else:
-        return ve,'ve'
-        
-    
-def NW_matrix(seq1, seq2,endgap_bool = False,penalty = -8, endpenalty = -8):
+        return ve, "ve"
+
+
+def NW_matrix(seq1, seq2, endgap_bool=False, penalty=-8, endpenalty=-8):
     """Returns 2 matrices, the score matrix and the direction matrix
-    
+
     seq1: string, first sequence to be compared. Y axis
     seq2: string, second sequence to be compared. X axis
     endgap_bool: boolean, whether there is an endgap
@@ -117,63 +131,73 @@ def NW_matrix(seq1, seq2,endgap_bool = False,penalty = -8, endpenalty = -8):
     endpenalty: int, endgap penalty amount
     """
 
-    output_matrix = [[0 for x in range(len(seq2)+1)] for y in range(len(seq1)+1)]
-    direction_matrix = [[0 for x in range(len(seq2)+1)] for y in range(len(seq1)+1)]
-    output_matrix[0][0] = 0 
+    output_matrix = [[0 for x in range(len(seq2) + 1)] for y in range(len(seq1) + 1)]
+    direction_matrix = [[0 for x in range(len(seq2) + 1)] for y in range(len(seq1) + 1)]
+    output_matrix[0][0] = 0
 
-    if endgap_bool:#initialize endgaps if applicable
-        for i in range(1,len(output_matrix)):
-            output_matrix[i][0] = output_matrix[i-1][0] + decide_score(output_matrix,0,i,seq1,seq2,True,penalty,endpenalty)
+    if endgap_bool:  # initialize endgaps if applicable
+        for i in range(1, len(output_matrix)):
+            output_matrix[i][0] = output_matrix[i - 1][0] + decide_score(
+                output_matrix, 0, i, seq1, seq2, True, penalty, endpenalty
+            )
 
-        for j in range(1,len(output_matrix[0])):
-            output_matrix[0][j] = output_matrix[0][j-1]+ decide_score(output_matrix,j,0,seq1,seq2,True,penalty,endpenalty)
+        for j in range(1, len(output_matrix[0])):
+            output_matrix[0][j] = output_matrix[0][j - 1] + decide_score(
+                output_matrix, j, 0, seq1, seq2, True, penalty, endpenalty
+            )
 
-    for y in range(1,len(output_matrix)): #y iterator
-        
-        for x in range(1,len(output_matrix[0])): #x iterator
-            #assign the matrix element the correct score for its current position
-            #print(str(y) + str(x))
-            output_matrix[y][x],direction_matrix[y][x] = decide_score(output_matrix,x,y,seq1,seq2,gap_penalty = penalty,end_gap_penalty = endpenalty)
-            
-                
-        #print('y: ' + str(len(output_matrix)) + ' ' + 'x: ' +str(len(output_matrix[0])))
-    return output_matrix,direction_matrix
+    for y in range(1, len(output_matrix)):  # y iterator
+        for x in range(1, len(output_matrix[0])):  # x iterator
+            # assign the matrix element the correct score for its current position
+            # print(str(y) + str(x))
+            output_matrix[y][x], direction_matrix[y][x] = decide_score(
+                output_matrix,
+                x,
+                y,
+                seq1,
+                seq2,
+                gap_penalty=penalty,
+                end_gap_penalty=endpenalty,
+            )
 
-        
+        # print('y: ' + str(len(output_matrix)) + ' ' + 'x: ' +str(len(output_matrix[0])))
+    return output_matrix, direction_matrix
+
+
 def traceback(matrix):
     """Return a path of the optimal alignment direction through the score matrix, starting at the end and going to the beginning
     matrix: 2d array, a matrix of direction arguments saved as strings
     """
-    path = [] #saves the path,0 for diagonal, 1 for horizontal, 2 for vertical
-    x = len(matrix[0]) -1
-   
-    y = len(matrix) -1
-    
+    path = []  # saves the path,0 for diagonal, 1 for horizontal, 2 for vertical
+    x = len(matrix[0]) - 1
+
+    y = len(matrix) - 1
+
     while x >= 0 and y >= 0:
-        if matrix[y][x] == 'di':
+        if matrix[y][x] == "di":
             if path:
-                path.append('di')
+                path.append("di")
             else:
-                path = ['di']
+                path = ["di"]
             x -= 1
             y -= 1
-        elif matrix[y][x] == 'ho':
+        elif matrix[y][x] == "ho":
             if path:
-                path.append('ho')
+                path.append("ho")
             else:
-                path = ['ho']
-            x-= 1
+                path = ["ho"]
+            x -= 1
         else:
             if path:
-                path.append('ve')
+                path.append("ve")
             else:
-                path = ['ve']
-            y-= 1
-        
-        
+                path = ["ve"]
+            y -= 1
+
     return path
 
-def visualize_alignment(seq1,seq2,path):
+
+def visualize_alignment(seq1, seq2, path):
     """Returns nothing
     visualizes the matrix, through interpreting the path, prints results
     seq1: string, first sequence to be compared. Y axis
@@ -181,80 +205,84 @@ def visualize_alignment(seq1,seq2,path):
     path: list, the directional optimal path through the matrix
     """
     mPath = path[::-1]
-    string_seq1 = ''''''
+    string_seq1 = """"""
     iterator_seq1 = 0
     hasmoved_vertical = False
-    string_seq2 = ''''''
+    string_seq2 = """"""
     iterator_seq2 = 0
     hasmoved_horizontal = False
-    
-    
-    #print(len(path))
-    #path code reminder: 0 for diagonal, 1 for horizontal, 2 for vertical
+
+    # print(len(path))
+    # path code reminder: 0 for diagonal, 1 for horizontal, 2 for vertical
     for direction in mPath:
-        if direction == 'di':#diagonal, both strings gain a piece of the sequence
-            
+        if direction == "di":  # diagonal, both strings gain a piece of the sequence
             string_seq1 += seq1[iterator_seq1]
-            iterator_seq1 +=1
+            iterator_seq1 += 1
 
             string_seq2 += seq2[iterator_seq2]
-            iterator_seq2 +=1
-        
+            iterator_seq2 += 1
+
             hasmoved_vertical = True
             hasmoved_horizontal = True
-            #set alignment
-            #string_alignment += '|'
-        
-                
+            # set alignment
+            # string_alignment += '|'
 
-        if direction == 'ho':#horizontal, gap in Y, x sequence gains a piece
+        if direction == "ho":  # horizontal, gap in Y, x sequence gains a piece
             if hasmoved_horizontal:
                 string_seq2 += seq2[iterator_seq2]
-                iterator_seq2 +=1
-                #string_alignment += ' '
+                iterator_seq2 += 1
+                # string_alignment += ' '
 
-            string_seq1 += '-'
+            string_seq1 += "-"
             hasmoved_horizontal = True
 
-        if direction == 've':#vertical, gap in X, y sequence gains a piece
+        if direction == "ve":  # vertical, gap in X, y sequence gains a piece
             if hasmoved_vertical:
                 string_seq1 += seq1[iterator_seq1]
-                iterator_seq1 +=1
-                string_seq2 += '-'
-                #string_alignment += ' '
+                iterator_seq1 += 1
+                string_seq2 += "-"
+                # string_alignment += ' '
             hasmoved_vertical = True
-        #set alignment better
-        string_alignment = ''''''
+        # set alignment better
+        string_alignment = """"""
         for i in range(len(string_seq1)):
             if string_seq1[i] == string_seq2[i]:
-                string_alignment += '|'
+                string_alignment += "|"
             else:
-                string_alignment += ' '
+                string_alignment += " "
 
-            
-    
-    print('\nAlignment:\n\n' + string_seq1 + '\n' + string_alignment + '\n' + string_seq2)
-    #print(str(len(string_seq1)) + '\n' + str(len(string_seq2)) + '\n' + str(len(string_alignment)))
+    print(
+        (
+            "\nAlignment:\n\n"
+            + string_seq1
+            + "\n"
+            + string_alignment
+            + "\n"
+            + string_seq2
+        )
+    )
+    # print(str(len(string_seq1)) + '\n' + str(len(string_seq2)) + '\n' + str(len(string_alignment)))
     permatch = percentage_match(string_alignment)
-    print("{0:.2f}%".format(percentage_match(string_alignment)) + ' Match')
+    print(("{0:.2f}%".format(percentage_match(string_alignment)) + " Match"))
+
 
 def percentage_match(alignment):
     """Returns output percentage of alignment between sequences
-    
+
     alignment: list, the alignment given in | and spaces
     """
     matches = 0
     for c in alignment:
-        if c == '|':
+        if c == "|":
             matches += 1
 
-    output_percentage = float(matches / len(alignment) * 100 )
+    output_percentage = float(matches / len(alignment) * 100)
     return output_percentage
-    
 
-def align_sequences(seq1,seq2,endgap_bool = False,penalty = -8, endpenalty = -8):
+
+def align_sequences(seq1, seq2, endgap_bool=False, penalty=-8, endpenalty=-8):
     """Returns nothing
-    
+
     aligns two sequences and prints the relevant information to the console
 
     seq1: string, first sequence to be compared. Y axis\n
@@ -263,14 +291,21 @@ def align_sequences(seq1,seq2,endgap_bool = False,penalty = -8, endpenalty = -8)
     penalty: int, penalty amount\n
     endpenalty: int, endgap penalty amount
     """
-    print('aligning sequences with gap: ' + str(endgap_bool) + '\nPenalty = ' + str(penalty))
-    print('sequence 1 = ' + seq1 + '\nsequence 2 = ' + seq2 )
-    score_matrix,direction_matrix = NW_matrix(seq1,seq2,endgap_bool,penalty,endpenalty)
-    print('\nMatrix:\n')
+    print(
+        (
+            "aligning sequences with gap: "
+            + str(endgap_bool)
+            + "\nPenalty = "
+            + str(penalty)
+        )
+    )
+    print(("sequence 1 = " + seq1 + "\nsequence 2 = " + seq2))
+    score_matrix, direction_matrix = NW_matrix(
+        seq1, seq2, endgap_bool, penalty, endpenalty
+    )
+    print("\nMatrix:\n")
     for line in score_matrix:
-        print(str(line))
+        print((str(line)))
     traceback_path = traceback(direction_matrix)
-    
-    visualize_alignment(seq1,seq2,traceback_path)
 
-
+    visualize_alignment(seq1, seq2, traceback_path)

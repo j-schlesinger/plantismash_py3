@@ -18,15 +18,16 @@
 
 import sys
 from os import path
-import ConfigParser
+import configparser
 from argparse import Namespace
 
 _config = None
 _basedir = path.dirname(path.abspath(__file__))
-_default_name = 'default.cfg'
-_sys_name = sys.platform + '.cfg'
-_user_file_name = path.expanduser('~/.antismash.cfg')
-_instance_file_name = 'instance.cfg'
+_default_name = "default.cfg"
+_sys_name = sys.platform + ".cfg"
+_user_file_name = path.expanduser("~/.antismash.cfg")
+_instance_file_name = "instance.cfg"
+
 
 def load_config(namespace):
     """Load config from a default and system-specific config file and
@@ -37,8 +38,8 @@ def load_config(namespace):
     instance_file = path.join(_basedir, _instance_file_name)
 
     # load generic configuration settins
-    config = ConfigParser.ConfigParser()
-    with open(default_file, 'r') as fp:
+    config = configparser.ConfigParser()
+    with open(default_file, "r") as fp:
         config.readfp(fp)
 
     # load system-specific config file if available
@@ -50,20 +51,22 @@ def load_config(namespace):
         if s not in namespace:
             namespace.__dict__[s] = Namespace()
         for key, value in config.items(s):
-            key = key.replace('-', '_')
+            key = key.replace("-", "_")
             if key not in namespace.__dict__[s]:
                 namespace.__dict__[s].__dict__[key] = value
 
     # settings from the [DEFAULT] section go to the global namespace
-    for key, value in config.items('DEFAULT'):
-        key = key.replace('-', '_')
+    for key, value in config.items("DEFAULT"):
+        key = key.replace("-", "_")
         if key not in namespace:
             namespace.__dict__[key] = value
+
 
 def set_config(namespace):
     """Set a namespace object to be the global configuration"""
     global _config
     _config = namespace
+
 
 def get_config():
     """Get the global configuration"""

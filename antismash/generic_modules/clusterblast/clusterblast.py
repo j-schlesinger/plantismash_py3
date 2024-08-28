@@ -22,31 +22,58 @@ from multiprocessing import Process
 from antismash import config
 from helperlibs.wrappers.io import TemporaryDirectory
 
+
 def runblast(query, target):
-    command = ["blastp", "-db", target, "-query", query, "-outfmt", "6", "-max_target_seqs", "10000", "-evalue", "1e-05", "-out", query.split(".")[0] + ".out"]
+    command = [
+        "blastp",
+        "-db",
+        target,
+        "-query",
+        query,
+        "-outfmt",
+        "6",
+        "-max_target_seqs",
+        "10000",
+        "-evalue",
+        "1e-05",
+        "-out",
+        query.split(".")[0] + ".out",
+    ]
     utils.execute(command)
 
 
 def run_diamond(query, target, tempdir, options):
     command = [
-        "diamond", "blastp",
-        "--db", target,
-        "--threads", str(options.cpus),
-        "--query", query,
-        "--compress", "0",
-        "--max-target-seqs", "10000",
-        "--evalue", "1e-05",
-        "--daa", "matches.daa",
-        "--tmpdir", tempdir
+        "diamond",
+        "blastp",
+        "--db",
+        target,
+        "--threads",
+        str(options.cpus),
+        "--query",
+        query,
+        "--compress",
+        "0",
+        "--max-target-seqs",
+        "10000",
+        "--evalue",
+        "1e-05",
+        "--daa",
+        "matches.daa",
+        "--tmpdir",
+        tempdir,
     ]
     return utils.execute(command)
 
 
 def convert_to_tabular(tempdir):
     command = [
-        "diamond", "view",
-        "-a", path.join(tempdir, "matches.daa"),
-        "-o", path.join(tempdir, "input.out")
+        "diamond",
+        "view",
+        "-a",
+        path.join(tempdir, "matches.daa"),
+        "-o",
+        path.join(tempdir, "input.out"),
     ]
     return utils.execute(command)
 
@@ -55,16 +82,27 @@ def make_blastdb(inputfile, dbname):
     command = ["makeblastdb", "-in", inputfile, "-out", dbname, "-dbtype", "prot"]
     utils.execute(command)
 
+
 def load_geneclusters(searchtype):
-    #Load gene cluster database into memory
+    # Load gene cluster database into memory
     options = config.get_config()
-    if not 'clusterblastdir' in options:
-        options.clusterblastdir = path.dirname(utils.get_full_path(__file__, ''))
-        options.subclusterblastdir = path.join(path.dirname(options.clusterblastdir), 'subclusterblast')
-        options.knownclusterblastdir = path.join(path.dirname(options.clusterblastdir), 'knownclusterblast')
+    if not "clusterblastdir" in options:
+        options.clusterblastdir = path.dirname(utils.get_full_path(__file__, ""))
+        options.subclusterblastdir = path.join(
+            path.dirname(options.clusterblastdir), "subclusterblast"
+        )
+        options.knownclusterblastdir = path.join(
+            path.dirname(options.clusterblastdir), "knownclusterblast"
+        )
     else:
-        options.subclusterblastdir = path.join(path.dirname(path.dirname(utils.get_full_path(__file__, ''))), 'subclusterblast')
-        options.knownclusterblastdir = path.join(path.dirname(path.dirname(utils.get_full_path(__file__, ''))), 'knownclusterblast')
+        options.subclusterblastdir = path.join(
+            path.dirname(path.dirname(utils.get_full_path(__file__, ""))),
+            "subclusterblast",
+        )
+        options.knownclusterblastdir = path.join(
+            path.dirname(path.dirname(utils.get_full_path(__file__, ""))),
+            "knownclusterblast",
+        )
 
     if searchtype == "general" and options.taxon == "plants":
         logging.info("ClusterBlast: Loading gene clusters database into memory...")
@@ -78,7 +116,7 @@ def load_geneclusters(searchtype):
     elif searchtype == "knownclusters":
         logging.info("KnownClusterBlast: Loading gene clusters database into memory...")
         geneclustersfile = path.join(options.knownclusterblastdir, "knownclusters.txt")
-    geneclustersfile = open(geneclustersfile,"r")
+    geneclustersfile = open(geneclustersfile, "r")
     filetext = geneclustersfile.read()
     lines = [line for line in filetext.split("\n") if "\t" in line]
     clusters = {}
@@ -91,38 +129,65 @@ def load_geneclusters(searchtype):
         clustername = accession + "_" + clusternr
         clustertags = tabs[4].split(";")
         clusterprots = tabs[5].split(";")
-        clusters[clustername] = [clusterprots,clusterdescription,clustertype,clustertags]
+        clusters[clustername] = [
+            clusterprots,
+            clusterdescription,
+            clustertype,
+            clustertags,
+        ]
     return clusters
+
 
 def load_geneclusterproteins(accessiondict, searchtype):
     options = config.get_config()
-    if not 'clusterblastdir' in options:
-        options.clusterblastdir = path.dirname(utils.get_full_path(__file__, ''))
-        options.subclusterblastdir = path.join(path.dirname(options.clusterblastdir), 'subclusterblast')
-        options.knownclusterblastdir = path.join(path.dirname(options.clusterblastdir), 'knownclusterblast')
+    if not "clusterblastdir" in options:
+        options.clusterblastdir = path.dirname(utils.get_full_path(__file__, ""))
+        options.subclusterblastdir = path.join(
+            path.dirname(options.clusterblastdir), "subclusterblast"
+        )
+        options.knownclusterblastdir = path.join(
+            path.dirname(options.clusterblastdir), "knownclusterblast"
+        )
     else:
-        options.subclusterblastdir = path.join(path.dirname(path.dirname(utils.get_full_path(__file__, ''))), 'subclusterblast')
-        options.knownclusterblastdir = path.join(path.dirname(path.dirname(utils.get_full_path(__file__, ''))), 'knownclusterblast')
-    #Load gene cluster database proteins info into memory
-    if searchtype == "general"  and options.taxon == "plants":
-        logging.info("ClusterBlast: Loading gene cluster database proteins into " \
-        "memory...")
-        gclusterprotsfile = path.join(options.clusterblastdir, "plantgeneclusterprots.fasta")
+        options.subclusterblastdir = path.join(
+            path.dirname(path.dirname(utils.get_full_path(__file__, ""))),
+            "subclusterblast",
+        )
+        options.knownclusterblastdir = path.join(
+            path.dirname(path.dirname(utils.get_full_path(__file__, ""))),
+            "knownclusterblast",
+        )
+    # Load gene cluster database proteins info into memory
+    if searchtype == "general" and options.taxon == "plants":
+        logging.info(
+            "ClusterBlast: Loading gene cluster database proteins into " "memory..."
+        )
+        gclusterprotsfile = path.join(
+            options.clusterblastdir, "plantgeneclusterprots.fasta"
+        )
     elif searchtype == "general":
-        logging.info("ClusterBlast: Loading gene cluster database proteins into " \
-        "memory...")
+        logging.info(
+            "ClusterBlast: Loading gene cluster database proteins into " "memory..."
+        )
         gclusterprotsfile = path.join(options.clusterblastdir, "geneclusterprots.fasta")
     elif searchtype == "subclusters":
-        logging.info("SubClusterBlast: Loading gene cluster database proteins into " \
-        "memory...")
-        gclusterprotsfile = path.join(options.subclusterblastdir, "subclusterprots.fasta")
+        logging.info(
+            "SubClusterBlast: Loading gene cluster database proteins into " "memory..."
+        )
+        gclusterprotsfile = path.join(
+            options.subclusterblastdir, "subclusterprots.fasta"
+        )
     elif searchtype == "knownclusters":
-        logging.info("KnownClusterBlast: Loading gene cluster database proteins into " \
-        "memory...")
-        gclusterprotsfile = path.join(options.knownclusterblastdir, "knownclusterprots.fasta")
-    gclusterprotsfile = open(gclusterprotsfile,"r")
+        logging.info(
+            "KnownClusterBlast: Loading gene cluster database proteins into "
+            "memory..."
+        )
+        gclusterprotsfile = path.join(
+            options.knownclusterblastdir, "knownclusterprots.fasta"
+        )
+    gclusterprotsfile = open(gclusterprotsfile, "r")
     filetext = gclusterprotsfile.read()
-    filetext = filetext.replace("\r","\n")
+    filetext = filetext.replace("\r", "\n")
     lines = filetext.split("\n")
     proteinlocations = {}
     proteinstrands = {}
@@ -133,7 +198,7 @@ def load_geneclusterproteins(accessiondict, searchtype):
             tabs = i.split("|")
             protein = tabs[6]
             locustag = tabs[4]
-            if accessiondict.has_key(locustag):
+            if locustag in accessiondict:
                 locustag = "h_" + locustag
             proteintags[protein] = locustag
             location = tabs[2]
@@ -144,17 +209,24 @@ def load_geneclusterproteins(accessiondict, searchtype):
             proteinannotations[protein] = annotation
     return proteinlocations, proteinstrands, proteinannotations, proteintags
 
+
 def load_clusterblast_database(seq_record, searchtype="general"):
     options = config.get_config()
     accessiondict = {}
     for cds in utils.get_cds_features(seq_record):
         accessiondict[utils.get_gene_acc(cds)] = utils.get_gene_accession(cds)
     clusters = load_geneclusters(searchtype)
-    proteinlocations, proteinstrands, proteinannotations, proteintags = load_geneclusterproteins(accessiondict, searchtype)
+    (
+        proteinlocations,
+        proteinstrands,
+        proteinannotations,
+        proteintags,
+    ) = load_geneclusterproteins(accessiondict, searchtype)
     return clusters, proteinlocations, proteinstrands, proteinannotations, proteintags
 
+
 def find_overlapping_groups(cdsfeatures):
-    #Identify groups of genes with overlaps
+    # Identify groups of genes with overlaps
     overlapping_groups = []
     for cdsfeature in cdsfeatures:
         overlaps = False
@@ -176,8 +248,9 @@ def find_overlapping_groups(cdsfeatures):
             overlapping_groups.append([cdsfeature])
     return overlapping_groups
 
+
 def filter_overlap(cdsfeatures):
-    #For groups of overlapping CDSs (e.g., alternative transcripts?), only use the longest one
+    # For groups of overlapping CDSs (e.g., alternative transcripts?), only use the longest one
     uniquecdsfeatures = []
     overlapping_groups = find_overlapping_groups(cdsfeatures)
     for group in overlapping_groups:
@@ -186,11 +259,14 @@ def filter_overlap(cdsfeatures):
         uniquecdsfeatures.append(group[longest_idx])
     return uniquecdsfeatures
 
+
 def create_blast_inputs(genecluster, seq_record):
     options = config.get_config()
-    #Create input fasta files for BLAST search
+    # Create input fasta files for BLAST search
     if options.taxon == "plants":
-        queryclusterprots = filter_overlap(utils.get_cluster_cds_features(genecluster, seq_record))
+        queryclusterprots = filter_overlap(
+            utils.get_cluster_cds_features(genecluster, seq_record)
+        )
     else:
         queryclusterprots = utils.get_cluster_cds_features(genecluster, seq_record)
     queryclusternames = []
@@ -201,25 +277,35 @@ def create_blast_inputs(genecluster, seq_record):
             strand = "+"
         else:
             strand = "-"
-        fullname = "|".join(["input", "c" + str(utils.get_cluster_number(genecluster)), \
-                             str(cds.location.start).replace(">","").replace("<","") + "-" + \
-                             str(cds.location.end).replace(">","").replace("<",""), \
-                             strand, utils.get_gene_acc(cds), utils.get_gene_annotation(cds)])
+        fullname = "|".join(
+            [
+                "input",
+                "c" + str(utils.get_cluster_number(genecluster)),
+                str(cds.location.start).replace(">", "").replace("<", "")
+                + "-"
+                + str(cds.location.end).replace(">", "").replace("<", ""),
+                strand,
+                utils.get_gene_acc(cds),
+                utils.get_gene_annotation(cds),
+            ]
+        )
         queryclusterseqs.append(str(utils.get_aa_sequence(cds)))
         queryclusternames.append(fullname)
         queryclusterprotsnames.append(utils.get_gene_acc(cds))
 
     return queryclusternames, queryclusterseqs, queryclusterprotsnames
 
+
 def run_internal_blastsearch():
-    #Run and parse BLAST search
+    # Run and parse BLAST search
     make_blastdb("internal_input.fasta", "internal_input.fasta")
     runblast("internal_input.fasta", "internal_input.fasta")
-    blastoutput = open("internal_input.out","r").read()
+    blastoutput = open("internal_input.out", "r").read()
     return blastoutput
 
+
 def uniqueblasthitfilter(blastlines):
-    #Filter for best blast hits (of one query on each subject)
+    # Filter for best blast hits (of one query on each subject)
     query_subject_combinations = []
     blastlines2 = []
     for i in blastlines:
@@ -234,15 +320,18 @@ def uniqueblasthitfilter(blastlines):
             blastlines2.append(i)
     return blastlines2
 
-def tresholdblasthitfilter(blastlines, minseqcoverage, minpercidentity, seqlengths, seq_record):
-    #Filters blastlines to get rid of hits that do not meet criteria
+
+def tresholdblasthitfilter(
+    blastlines, minseqcoverage, minpercidentity, seqlengths, seq_record
+):
+    # Filters blastlines to get rid of hits that do not meet criteria
     blastlines2 = []
     for i in blastlines:
         tabs = i.split("\t")
         query = tabs[0]
         perc_ident = int(float(tabs[2]) + 0.5)
         alignmentlength = float(tabs[3])
-        if seqlengths.has_key(query.split("|")[4]):
+        if query.split("|")[4] in seqlengths:
             perc_coverage = (float(tabs[3]) / seqlengths[query.split("|")[4]]) * 100
         else:
             feature_by_id = utils.get_feature_dict_protein_id(seq_record)
@@ -252,16 +341,22 @@ def tresholdblasthitfilter(blastlines, minseqcoverage, minpercidentity, seqlengt
             blastlines2.append(i)
     return blastlines2
 
+
 def blastparse(blasttext, minseqcoverage, minpercidentity, seqlengths, seq_record):
     options = config.get_config()
-    geneclustergenes = [utils.get_gene_acc(cds) for cds in utils.get_withincluster_cds_features(seq_record)]
+    geneclustergenes = [
+        utils.get_gene_acc(cds)
+        for cds in utils.get_withincluster_cds_features(seq_record)
+    ]
     blastdict = {}
     querylist = []
     hitclusters = []
     blastlines = blasttext.split("\n")[:-1]
     blastlines = uniqueblasthitfilter(blastlines)
-    blastlines = tresholdblasthitfilter(blastlines, minseqcoverage, minpercidentity, seqlengths, seq_record)
-    #Goes through the blastlines. For each query, creates a querydict and hitlist, and adds these to the blastdict when finding the next query
+    blastlines = tresholdblasthitfilter(
+        blastlines, minseqcoverage, minpercidentity, seqlengths, seq_record
+    )
+    # Goes through the blastlines. For each query, creates a querydict and hitlist, and adds these to the blastdict when finding the next query
     firstquery = "y"
     percid_per_cluster = {}
     for i in blastlines:
@@ -279,35 +374,57 @@ def blastparse(blasttext, minseqcoverage, minpercidentity, seqlengths, seq_recor
         subject_genecluster = tabs[1].split("|")[0] + "_" + tabs[1].split("|")[1]
         subject_start = (tabs[1].split("|")[2]).split("-")[0]
         subject_end = (tabs[1].split("|")[2]).split("-")[1]
-        subject_strand  = tabs[1].split("|")[3]
+        subject_strand = tabs[1].split("|")[3]
         subject_annotation = tabs[1].split("|")[5]
         perc_ident = int(float(tabs[2]) + 0.5)
         evalue = str(tabs[10])
-        blastscore = int(float(tabs[11])+0.5)
-        if seqlengths.has_key(query.split("|")[4]):
+        blastscore = int(float(tabs[11]) + 0.5)
+        if query.split("|")[4] in seqlengths:
             perc_coverage = (float(tabs[3]) / seqlengths[query.split("|")[4]]) * 100
         else:
             feature_by_id = utils.get_feature_dict_protein_id(seq_record)
             seqlength = len(utils.get_aa_sequence(feature_by_id[query.split("|")[4]]))
             perc_coverage = (float(tabs[3]) / seqlength) * 100
-        if firstquery == "y": #Only until the first blastline with good hit
+        if firstquery == "y":  # Only until the first blastline with good hit
             firstquery = "n"
             querylist.append(query)
             subjectlist = []
             querydict = {}
             subjectlist.append(subject)
-            querydict[subject] = [subject_genecluster,subject_start,subject_end,subject_strand,subject_annotation,perc_ident,blastscore,perc_coverage,evalue,locustag]
+            querydict[subject] = [
+                subject_genecluster,
+                subject_start,
+                subject_end,
+                subject_strand,
+                subject_annotation,
+                perc_ident,
+                blastscore,
+                perc_coverage,
+                evalue,
+                locustag,
+            ]
             if subject_genecluster not in hitclusters:
                 percid_per_cluster[subject_genecluster] = [perc_ident]
                 hitclusters.append(subject_genecluster)
             last_query = query
-        elif i == blastlines[-1]: #Only for the last blastline
+        elif i == blastlines[-1]:  # Only for the last blastline
             if query not in querylist:
                 subjectlist = []
                 querydict = {}
                 subjectlist.append(subject)
-                querydict[subject] = [subject_genecluster,subject_start,subject_end,subject_strand,subject_annotation,perc_ident,blastscore,perc_coverage,evalue,locustag]
-                blastdict[query] = [subjectlist,querydict]
+                querydict[subject] = [
+                    subject_genecluster,
+                    subject_start,
+                    subject_end,
+                    subject_strand,
+                    subject_annotation,
+                    perc_ident,
+                    blastscore,
+                    perc_coverage,
+                    evalue,
+                    locustag,
+                ]
+                blastdict[query] = [subjectlist, querydict]
                 querylist.append(query)
                 if subject_genecluster not in hitclusters:
                     hitclusters.append(subject_genecluster)
@@ -316,21 +433,43 @@ def blastparse(blasttext, minseqcoverage, minpercidentity, seqlengths, seq_recor
                     percid_per_cluster[subject_genecluster].append(perc_ident)
             else:
                 subjectlist.append(subject)
-                querydict[subject] = [subject_genecluster,subject_start,subject_end,subject_strand,subject_annotation,perc_ident,blastscore,perc_coverage,evalue,locustag]
-                blastdict[query] = [subjectlist,querydict]
+                querydict[subject] = [
+                    subject_genecluster,
+                    subject_start,
+                    subject_end,
+                    subject_strand,
+                    subject_annotation,
+                    perc_ident,
+                    blastscore,
+                    perc_coverage,
+                    evalue,
+                    locustag,
+                ]
+                blastdict[query] = [subjectlist, querydict]
                 if subject_genecluster not in hitclusters:
                     hitclusters.append(subject_genecluster)
                     percid_per_cluster[subject_genecluster] = [perc_ident]
                 else:
                     percid_per_cluster[subject_genecluster].append(perc_ident)
-        else: #For all but the first and last blastlines
+        else:  # For all but the first and last blastlines
             if query not in querylist:
-                blastdict[last_query] = [subjectlist,querydict]
+                blastdict[last_query] = [subjectlist, querydict]
                 querylist.append(query)
                 subjectlist = []
                 querydict = {}
                 subjectlist.append(subject)
-                querydict[subject] = [subject_genecluster,subject_start,subject_end,subject_strand,subject_annotation,perc_ident,blastscore,perc_coverage,evalue,locustag]
+                querydict[subject] = [
+                    subject_genecluster,
+                    subject_start,
+                    subject_end,
+                    subject_strand,
+                    subject_annotation,
+                    perc_ident,
+                    blastscore,
+                    perc_coverage,
+                    evalue,
+                    locustag,
+                ]
                 if subject_genecluster not in hitclusters:
                     hitclusters.append(subject_genecluster)
                     percid_per_cluster[subject_genecluster] = [perc_ident]
@@ -339,16 +478,33 @@ def blastparse(blasttext, minseqcoverage, minpercidentity, seqlengths, seq_recor
                 last_query = query
             else:
                 subjectlist.append(subject)
-                querydict[subject] = [subject_genecluster,subject_start,subject_end,subject_strand,subject_annotation,perc_ident,blastscore,perc_coverage,evalue,locustag]
+                querydict[subject] = [
+                    subject_genecluster,
+                    subject_start,
+                    subject_end,
+                    subject_strand,
+                    subject_annotation,
+                    perc_ident,
+                    blastscore,
+                    perc_coverage,
+                    evalue,
+                    locustag,
+                ]
                 if subject_genecluster not in hitclusters:
                     hitclusters.append(subject_genecluster)
                     percid_per_cluster[subject_genecluster] = [perc_ident]
                 else:
                     percid_per_cluster[subject_genecluster].append(perc_ident)
-    #For plants, filter hitclusters to only keep those hits with at least one hit > 60% ID
+    # For plants, filter hitclusters to only keep those hits with at least one hit > 60% ID
     if options.taxon == "plants":
-        hitclusters = [cluster for cluster in hitclusters if len([int(pid) for pid in percid_per_cluster[cluster] if int(pid) > 60]) > 0]
-    return [blastdict,querylist,hitclusters]
+        hitclusters = [
+            cluster
+            for cluster in hitclusters
+            if len([int(pid) for pid in percid_per_cluster[cluster] if int(pid) > 60])
+            > 0
+        ]
+    return [blastdict, querylist, hitclusters]
+
 
 def fastaseqlengths(seq_record):
     seqlengths = {}
@@ -358,21 +514,26 @@ def fastaseqlengths(seq_record):
         seqlengths[utils.get_gene_acc(cds)] = seqlength
     return seqlengths
 
+
 def parse_blast(blastoutput, seq_record, minseqcoverage, minpercidentity):
     seqlengths = fastaseqlengths(seq_record)
-    blastinfo = blastparse(blastoutput, minseqcoverage,
-                            minpercidentity, seqlengths, seq_record)
+    blastinfo = blastparse(
+        blastoutput, minseqcoverage, minpercidentity, seqlengths, seq_record
+    )
     blastdict = blastinfo[0]
     querylist = blastinfo[1]
     hitclusters = blastinfo[2]
 
     return blastdict, querylist, hitclusters
 
-def find_internal_orthologous_groups(internalhomologygroupsdict, iblastdict, iqueryclusternames, clusternumber):
-    #find and store internal homologs
+
+def find_internal_orthologous_groups(
+    internalhomologygroupsdict, iblastdict, iqueryclusternames, clusternumber
+):
+    # find and store internal homologs
     groups = []
     for j in iqueryclusternames:
-        if iblastdict.has_key(j):
+        if j in iblastdict:
             hits = iblastdict[j][0]
             group = []
             for k in hits:
@@ -401,21 +562,36 @@ def find_internal_orthologous_groups(internalhomologygroupsdict, iblastdict, iqu
     internalhomologygroupsdict[clusternumber] = groups
     return internalhomologygroupsdict
 
+
 def internal_homology_blast(seq_record):
     options = config.get_config()
-    #Run BLAST on gene cluster proteins of each cluster on itself to find internal homologs, store groups of homologs - including singles - in a dictionary as a list of lists accordingly
+    # Run BLAST on gene cluster proteins of each cluster on itself to find internal homologs, store groups of homologs - including singles - in a dictionary as a list of lists accordingly
     with TemporaryDirectory(change=True):
         logging.info("Finding internal homologs in each gene cluster..")
         internalhomologygroupsdict = {}
         geneclusters = utils.get_sorted_cluster_features(seq_record)
         for genecluster in geneclusters:
             clusternumber = utils.get_cluster_number(genecluster)
-            iqueryclusternames, iqueryclusterseqs, iqueryclusterprots = create_blast_inputs(genecluster, seq_record)
-            utils.writefasta(iqueryclusternames, iqueryclusterseqs, "internal_input.fasta")
+            (
+                iqueryclusternames,
+                iqueryclusterseqs,
+                iqueryclusterprots,
+            ) = create_blast_inputs(genecluster, seq_record)
+            utils.writefasta(
+                iqueryclusternames, iqueryclusterseqs, "internal_input.fasta"
+            )
             blastoutput = run_internal_blastsearch()
-            iblastdict, iquerylist, ihitclusters = parse_blast(blastoutput, seq_record, 25, 30)
-            internalhomologygroupsdict = find_internal_orthologous_groups(internalhomologygroupsdict, iblastdict, iqueryclusternames, clusternumber)
+            iblastdict, iquerylist, ihitclusters = parse_blast(
+                blastoutput, seq_record, 25, 30
+            )
+            internalhomologygroupsdict = find_internal_orthologous_groups(
+                internalhomologygroupsdict,
+                iblastdict,
+                iqueryclusternames,
+                clusternumber,
+            )
     return internalhomologygroupsdict
+
 
 def write_clusterblast_inputfiles(options, queryclusternames, queryclusterseqs):
     equalpartsizes = int(len(queryclusternames) / options.cpus)
@@ -424,27 +600,33 @@ def write_clusterblast_inputfiles(options, queryclusternames, queryclusterseqs):
             setnames = queryclusternames[:equalpartsizes]
             setseqs = queryclusterseqs[:equalpartsizes]
         elif i == (options.cpus - 1):
-            setnames = queryclusternames[(i*equalpartsizes):]
-            setseqs = queryclusterseqs[(i*equalpartsizes):]
+            setnames = queryclusternames[(i * equalpartsizes) :]
+            setseqs = queryclusterseqs[(i * equalpartsizes) :]
         else:
-            setnames = queryclusternames[(i*equalpartsizes):((i+1)*equalpartsizes)]
-            setseqs = queryclusterseqs[(i*equalpartsizes):((i+1)*equalpartsizes)]
+            setnames = queryclusternames[
+                (i * equalpartsizes) : ((i + 1) * equalpartsizes)
+            ]
+            setseqs = queryclusterseqs[
+                (i * equalpartsizes) : ((i + 1) * equalpartsizes)
+            ]
         utils.writefasta(setnames, setseqs, "input" + str(i) + ".fasta")
 
-def run_clusterblast_processes(options, searchtype="general"):
 
+def run_clusterblast_processes(options, searchtype="general"):
     processes = []
     for i in range(options.cpus):
         if searchtype == "general":
-            blastdb = path.join(options.clusterblastdir, 'geneclusterprots.fasta')
+            blastdb = path.join(options.clusterblastdir, "geneclusterprots.fasta")
         elif searchtype == "subclusters":
-            blastdb = path.join(options.subclusterblastdir, 'subclusterprots.fasta')
+            blastdb = path.join(options.subclusterblastdir, "subclusterprots.fasta")
         elif searchtype == "knownclusters":
-            blastdb = path.join(options.knownclusterblastdir, 'knownclusterprots.fasta')
-        if sys.platform == 'win32':
+            blastdb = path.join(options.knownclusterblastdir, "knownclusterprots.fasta")
+        if sys.platform == "win32":
             blastpath, _, blastdb = blastdb.rpartition(os.sep)
-            os.environ['BLASTDB'] = blastpath
-        processes.append(Process(target=runblast, args=["input" + str(i) + ".fasta", blastdb]))
+            os.environ["BLASTDB"] = blastpath
+        processes.append(
+            Process(target=runblast, args=["input" + str(i) + ".fasta", blastdb])
+        )
     for i in processes:
         i.start()
     time.sleep(10)
@@ -460,37 +642,49 @@ def run_clusterblast_processes(options, searchtype="general"):
     for i in processes:
         i.join()
 
+
 def read_clusterblast_output(options):
     blastoutput = ""
     for i in range(options.cpus):
-        fh = open("input" + str(i) + ".out","r")
+        fh = open("input" + str(i) + ".out", "r")
         output = fh.read()
         fh.close()
         blastoutput = blastoutput + output
     return blastoutput
 
+
 def write_raw_clusterblastoutput(outputfoldername, blastoutput, searchtype="general"):
     if searchtype == "general":
-        blastoutputfile = open(outputfoldername + os.sep + "clusterblastoutput.txt","w")
+        blastoutputfile = open(
+            outputfoldername + os.sep + "clusterblastoutput.txt", "w"
+        )
     elif searchtype == "subclusters":
-        blastoutputfile = open(outputfoldername + os.sep + "subclusterblastoutput.txt","w")
+        blastoutputfile = open(
+            outputfoldername + os.sep + "subclusterblastoutput.txt", "w"
+        )
     elif searchtype == "knownclusters":
-        blastoutputfile = open(outputfoldername + os.sep + "knownclusterblastoutput.txt","w")
+        blastoutputfile = open(
+            outputfoldername + os.sep + "knownclusterblastoutput.txt", "w"
+        )
     blastoutputfile.write(blastoutput)
     blastoutputfile.close()
 
+
 def remove_queries_without_hits(querylist, blastdict):
-    #Remove queries without hits
+    # Remove queries without hits
     querylist2 = []
     for i in querylist:
-        if blastdict.has_key(i):
+        if i in blastdict:
             querylist2.append(i)
         else:
             pass
     querylist = querylist2
     return querylist
 
-def parse_clusterblast_dict(blastdict, querylist, clusters, hitclusternumber, hitclusterdata, allcoregenes):
+
+def parse_clusterblast_dict(
+    blastdict, querylist, clusters, hitclusternumber, hitclusterdata, allcoregenes
+):
     hitclusterdatalist = []
     nrhits = float(0)
     nrcoregenehits = float(0)
@@ -503,14 +697,35 @@ def parse_clusterblast_dict(blastdict, querylist, clusters, hitclusternumber, hi
         nrhitsplus = "n"
         for k in blastdict[j][0]:
             if hitclusternumber == blastdict[j][1][k][0]:
-                if blastdict[j][1][k][9] in clusters[hitclusternumber][0] and [querylist.index(j),clusters[hitclusternumber][0].index(blastdict[j][1][k][9])] not in hitpositions:
+                if (
+                    blastdict[j][1][k][9] in clusters[hitclusternumber][0]
+                    and [
+                        querylist.index(j),
+                        clusters[hitclusternumber][0].index(blastdict[j][1][k][9]),
+                    ]
+                    not in hitpositions
+                ):
                     nrhitsplus = "y"
                     querynrhits += 1
                     blastscore = float(blastdict[j][1][k][6]) / 100000000
                     querycumblastscore = querycumblastscore + blastscore
-                    hitclusterdatalist.append([j,k,blastdict[j][1][k][5],blastdict[j][1][k][6],blastdict[j][1][k][7],blastdict[j][1][k][8]])
+                    hitclusterdatalist.append(
+                        [
+                            j,
+                            k,
+                            blastdict[j][1][k][5],
+                            blastdict[j][1][k][6],
+                            blastdict[j][1][k][7],
+                            blastdict[j][1][k][8],
+                        ]
+                    )
                     hitclusterdata[hitclusternumber] = hitclusterdatalist
-                    hitpositions.append([querylist.index(j),clusters[hitclusternumber][0].index(blastdict[j][1][k][9])])
+                    hitpositions.append(
+                        [
+                            querylist.index(j),
+                            clusters[hitclusternumber][0].index(blastdict[j][1][k][9]),
+                        ]
+                    )
         if nrhitsplus == "y":
             nrhits += 1
             if j.split("|")[4] in allcoregenes:
@@ -521,34 +736,53 @@ def parse_clusterblast_dict(blastdict, querylist, clusters, hitclusternumber, hi
                 for hit in range(querynrhits):
                     hitposcorelist.append(0)
             cumblastscore = cumblastscore + float(querycumblastscore)
-    return hitclusterdata, nrhits, nrcoregenehits, cumblastscore, hitpositions, hitposcorelist
+    return (
+        hitclusterdata,
+        nrhits,
+        nrcoregenehits,
+        cumblastscore,
+        hitpositions,
+        hitposcorelist,
+    )
+
 
 def find_clusterblast_hitsgroups(hitpositions):
-    #Find groups of hits
+    # Find groups of hits
     hitgroupsdict = {}
     for p in hitpositions:
-        if not hitgroupsdict.has_key(p[0]):
+        if p[0] not in hitgroupsdict:
             hitgroupsdict[p[0]] = [p[1]]
         else:
             hitgroupsdict[p[0]].append(p[1])
     return hitgroupsdict
 
+
 def calculate_synteny_score(hitgroupsdict, hitpositions, hitposcorelist, nrhits):
     query_givenscores_querydict = {}
     query_givenscores_hitdict = {}
-    #Calculate synteny score; give score only if more than one hits (otherwise no synteny possible), and only once for every query gene and every hit gene
+    # Calculate synteny score; give score only if more than one hits (otherwise no synteny possible), and only once for every query gene and every hit gene
     synteny_score = 0
     z = 1
     if nrhits > 1:
         for p in hitpositions[:-1]:
             tandem = "n"
-            #Check if a gene homologous to this gene has already been scored for synteny in the previous entry
+            # Check if a gene homologous to this gene has already been scored for synteny in the previous entry
             if p[1] in hitgroupsdict[hitpositions[z][0]]:
                 tandem = "y"
-            #Score entry
-            if ((not query_givenscores_querydict.has_key(p[0])) or query_givenscores_querydict[p[0]] == 0) and ((not query_givenscores_hitdict.has_key(p[1])) or query_givenscores_hitdict[p[1]] == 0) and tandem == "n":
+            # Score entry
+            if (
+                (
+                    (p[0] not in query_givenscores_querydict)
+                    or query_givenscores_querydict[p[0]] == 0
+                )
+                and (
+                    (p[1] not in query_givenscores_hitdict)
+                    or query_givenscores_hitdict[p[1]] == 0
+                )
+                and tandem == "n"
+            ):
                 q = hitpositions[z]
-                if (abs(p[0] - q[0]) < 2) and abs(p[0]-q[0]) == abs(p[1]-q[1]):
+                if (abs(p[0] - q[0]) < 2) and abs(p[0] - q[0]) == abs(p[1] - q[1]):
                     synteny_score += 1
                     if hitposcorelist[z - 1] == 1 or hitposcorelist[z] == 1:
                         synteny_score += 1
@@ -560,33 +794,51 @@ def calculate_synteny_score(hitgroupsdict, hitpositions, hitposcorelist, nrhits)
             z += 1
     return synteny_score
 
-def score_clusterblast_output(blastdict, querylist, hitclusters, clusters, allcoregenes):
-    #Score BLAST output on all gene clusters
-    #Rank gene cluster hits based on 1) number of protein hits covering >25% sequence length or at least 100aa alignment, with >30% identity and 2) cumulative blast score
-    #Find number of protein hits and cumulative blast score for each gene cluster
+
+def score_clusterblast_output(
+    blastdict, querylist, hitclusters, clusters, allcoregenes
+):
+    # Score BLAST output on all gene clusters
+    # Rank gene cluster hits based on 1) number of protein hits covering >25% sequence length or at least 100aa alignment, with >30% identity and 2) cumulative blast score
+    # Find number of protein hits and cumulative blast score for each gene cluster
     logging.info("   Scoring DIAMOND outputs on database of gene clusters...")
     hitclusterdict = {}
     hitclusterdata = {}
     for i in hitclusters:
-        hitclusterdata, nrhits, nrcoregenehits, cumblastscore, hitpositions, hitposcorelist = parse_clusterblast_dict(blastdict, querylist, clusters, i, hitclusterdata, allcoregenes)
+        (
+            hitclusterdata,
+            nrhits,
+            nrcoregenehits,
+            cumblastscore,
+            hitpositions,
+            hitposcorelist,
+        ) = parse_clusterblast_dict(
+            blastdict, querylist, clusters, i, hitclusterdata, allcoregenes
+        )
         hitgroupsdict = find_clusterblast_hitsgroups(hitpositions)
-        synteny_score = calculate_synteny_score(hitgroupsdict, hitpositions, hitposcorelist, nrhits)
-        #Give bonus to gene clusters with >0 core gene hits
+        synteny_score = calculate_synteny_score(
+            hitgroupsdict, hitpositions, hitposcorelist, nrhits
+        )
+        # Give bonus to gene clusters with >0 core gene hits
         if nrcoregenehits > 0:
             corebonus = 3
         else:
             corebonus = 0
-        #sorting score is based on number of hits (discrete values) & cumulative blast score (behind comma values)
-        sortingscore = nrhits + synteny_score + corebonus + nrcoregenehits + cumblastscore
+        # sorting score is based on number of hits (discrete values) & cumulative blast score (behind comma values)
+        sortingscore = (
+            nrhits + synteny_score + corebonus + nrcoregenehits + cumblastscore
+        )
         if len(set([pos[1] for pos in hitpositions])) > 1 and nrhits > 1:
             hitclusterdict[i] = sortingscore
-    #Sort gene clusters
+    # Sort gene clusters
     rankedclusters = utils.sortdictkeysbyvaluesrev(hitclusterdict)
     rankedclustervalues = utils.sortdictkeysbyvaluesrevv(hitclusterdict)
     return rankedclusters, rankedclustervalues, hitclusterdict, hitclusterdata
 
-def write_clusterblast_output(options, seq_record,clusterblastStorage, searchtype="general"):
 
+def write_clusterblast_output(
+    options, seq_record, clusterblastStorage, searchtype="general"
+):
     clusternumber = clusterblastStorage.clusternumber
     queryclusterprots = clusterblastStorage.queryclusterprots
     clusters = clusterblastStorage.clusters
@@ -598,28 +850,36 @@ def write_clusterblast_output(options, seq_record,clusterblastStorage, searchtyp
     proteinannotations = clusterblastStorage.proteinannotations
     proteinstrands = clusterblastStorage.proteinstrands
 
-    #Output for each hit: table of genes and locations of input cluster, table of genes and locations of hit cluster, table of hits between the clusters
+    # Output for each hit: table of genes and locations of input cluster, table of genes and locations of hit cluster, table of hits between the clusters
     logging.info("   Writing output file...")
     currentdir = os.getcwd()
     if searchtype == "general":
-        options.clusterblast_outputfolder = options.full_outputfolder_path + os.sep + "clusterblast"
+        options.clusterblast_outputfolder = (
+            options.full_outputfolder_path + os.sep + "clusterblast"
+        )
         if not os.path.exists(options.clusterblast_outputfolder):
             os.mkdir(options.clusterblast_outputfolder)
         outputfolder = options.clusterblast_outputfolder
     elif searchtype == "subclusters":
-        options.subclusterblast_outputfolder = options.full_outputfolder_path + os.sep + "subclusterblast"
+        options.subclusterblast_outputfolder = (
+            options.full_outputfolder_path + os.sep + "subclusterblast"
+        )
         if not os.path.exists(options.subclusterblast_outputfolder):
             os.mkdir(options.subclusterblast_outputfolder)
         outputfolder = options.subclusterblast_outputfolder
     elif searchtype == "knownclusters":
-        options.knownclusterblast_outputfolder = options.full_outputfolder_path + os.sep + "knownclusterblast"
+        options.knownclusterblast_outputfolder = (
+            options.full_outputfolder_path + os.sep + "knownclusterblast"
+        )
         if not os.path.exists(options.knownclusterblast_outputfolder):
             os.mkdir(options.knownclusterblast_outputfolder)
         outputfolder = options.knownclusterblast_outputfolder
     os.chdir(outputfolder)
-    out_file = open("cluster" + str(clusternumber) + ".txt","w")
+    out_file = open("cluster" + str(clusternumber) + ".txt", "w")
     out_file.write("ClusterBlast scores for " + seq_record.id + "\n")
-    out_file.write("\nTable of genes, locations, strands and annotations of query cluster:\n")
+    out_file.write(
+        "\nTable of genes, locations, strands and annotations of query cluster:\n"
+    )
     feature_by_id = utils.get_feature_dict_protein_id(seq_record)
     for i in queryclusterprots:
         cds = feature_by_id[i]
@@ -627,11 +887,22 @@ def write_clusterblast_output(options, seq_record,clusterblastStorage, searchtyp
             strand = "+"
         else:
             strand = "-"
-        out_file.write("\t".join([i, str(cds.location.start).replace(">","").replace("<",""), str(cds.location.end).replace(">","").replace("<",""), strand, utils.get_gene_annotation(cds)]) + "\t\n")
+        out_file.write(
+            "\t".join(
+                [
+                    i,
+                    str(cds.location.start).replace(">", "").replace("<", ""),
+                    str(cds.location.end).replace(">", "").replace("<", ""),
+                    strand,
+                    utils.get_gene_annotation(cds),
+                ]
+            )
+            + "\t\n"
+        )
     out_file.write("\n\nSignificant hits: \n")
     z = 0
     for i in rankedclusters[:100]:
-        out_file.write(str(z+1) + ". " + i + "\t" + clusters[i][1] + "\n")
+        out_file.write(str(z + 1) + ". " + i + "\t" + clusters[i][1] + "\n")
         z += 1
     z = 0
     out_file.write("\n\nDetails:")
@@ -641,17 +912,45 @@ def write_clusterblast_output(options, seq_record,clusterblastStorage, searchtyp
         if nrhits > 0:
             out_file.write("\n\n>>\n")
             cumblastscore = str(int(float(value.split(".")[1][2:])))
-            out_file.write("\n".join([str(z+1) + ". " + i, "Source: " + clusters[i][1], "Type: " + clusters[i][2], "Number of proteins with BLAST hits to this cluster: " + nrhits,"Cumulative BLAST score: " + cumblastscore + "\n", "Table of genes, locations, strands and annotations of subject cluster:\n"]))
+            out_file.write(
+                "\n".join(
+                    [
+                        str(z + 1) + ". " + i,
+                        "Source: " + clusters[i][1],
+                        "Type: " + clusters[i][2],
+                        "Number of proteins with BLAST hits to this cluster: " + nrhits,
+                        "Cumulative BLAST score: " + cumblastscore + "\n",
+                        "Table of genes, locations, strands and annotations of subject cluster:\n",
+                    ]
+                )
+            )
             clusterproteins = clusters[i][0]
             for j in clusterproteins:
-                if proteinlocations.has_key(j) and proteinannotations.has_key(j) and proteinstrands.has_key(j):
+                if (
+                    j in proteinlocations
+                    and j in proteinannotations
+                    and j in proteinstrands
+                ):
                     if proteintags[j] == "no_locus_tag":
                         out_file.write(j + "\t")
                     else:
                         out_file.write(proteintags[j] + "\t")
-                    out_file.write("\t".join([j, proteinlocations[j].split("-")[0], proteinlocations[j].split("-")[1], proteinstrands[j], proteinannotations[j]]) + "\n")
-            out_file.write("\nTable of Blast hits (query gene, subject gene, %identity, blast score, %coverage, e-value):\n")
-            if i in hitclusterdata.keys():
+                    out_file.write(
+                        "\t".join(
+                            [
+                                j,
+                                proteinlocations[j].split("-")[0],
+                                proteinlocations[j].split("-")[1],
+                                proteinstrands[j],
+                                proteinannotations[j],
+                            ]
+                        )
+                        + "\n"
+                    )
+            out_file.write(
+                "\nTable of Blast hits (query gene, subject gene, %identity, blast score, %coverage, e-value):\n"
+            )
+            if i in list(hitclusterdata.keys()):
                 tabledata = hitclusterdata[i]
                 for x in tabledata:
                     w = 0
@@ -669,41 +968,104 @@ def write_clusterblast_output(options, seq_record,clusterblastStorage, searchtyp
     out_file.close()
     os.chdir(currentdir)
 
-def perform_clusterblast(options, seq_record, clusters, proteinlocations, proteinstrands, proteinannotations, proteintags):
-    #Run BLAST on gene cluster proteins of each cluster and parse output
+
+def perform_clusterblast(
+    options,
+    seq_record,
+    clusters,
+    proteinlocations,
+    proteinstrands,
+    proteinannotations,
+    proteintags,
+):
+    # Run BLAST on gene cluster proteins of each cluster and parse output
     logging.info("Running DIAMOND gene cluster searches..")
     geneclusters = utils.get_sorted_cluster_features(seq_record)
     with TemporaryDirectory(change=True) as tempdir:
         for genecluster in geneclusters:
             clusternumber = utils.get_cluster_number(genecluster)
-            if options.debug and os.path.exists(options.dbgclusterblast + os.sep + "clusterblast" + os.sep + "cluster" + str(clusternumber) + ".txt"):
-                logging.debug ("Skipping Clusterblast calculations, using results from %s instead" % options.dbgclusterblast + os.sep + "clusterblast"  + os.sep + "cluster" + str(clusternumber) + ".txt")
+            if options.debug and os.path.exists(
+                options.dbgclusterblast
+                + os.sep
+                + "clusterblast"
+                + os.sep
+                + "cluster"
+                + str(clusternumber)
+                + ".txt"
+            ):
+                logging.debug(
+                    "Skipping Clusterblast calculations, using results from %s instead"
+                    % options.dbgclusterblast
+                    + os.sep
+                    + "clusterblast"
+                    + os.sep
+                    + "cluster"
+                    + str(clusternumber)
+                    + ".txt"
+                )
             else:
-
                 logging.info("   Gene cluster " + str(clusternumber))
-                queryclusternames, queryclusterseqs, queryclusterprots = create_blast_inputs(genecluster, seq_record)
+                (
+                    queryclusternames,
+                    queryclusterseqs,
+                    queryclusterprots,
+                ) = create_blast_inputs(genecluster, seq_record)
                 utils.writefasta(queryclusternames, queryclusterseqs, "input.fasta")
                 if options.taxon == "plants":
-                    out, err, retcode = run_diamond("input.fasta", path.join(options.clusterblastdir, "plantgeneclusterprots"), tempdir, options)
+                    out, err, retcode = run_diamond(
+                        "input.fasta",
+                        path.join(options.clusterblastdir, "plantgeneclusterprots"),
+                        tempdir,
+                        options,
+                    )
                 else:
-                    out, err, retcode = run_diamond("input.fasta", path.join(options.clusterblastdir, "geneclusterprots"), tempdir, options)
+                    out, err, retcode = run_diamond(
+                        "input.fasta",
+                        path.join(options.clusterblastdir, "geneclusterprots"),
+                        tempdir,
+                        options,
+                    )
                 if retcode != 0:
-                    logging.error("Running diamond failed: returned %s, stderr: %r, stdout: %r", retcode, err, out)
+                    logging.error(
+                        "Running diamond failed: returned %s, stderr: %r, stdout: %r",
+                        retcode,
+                        err,
+                        out,
+                    )
                 out, err, retcode = convert_to_tabular(tempdir)
                 if retcode != 0:
-                    logging.error("Converting daa failed: returned %s, stderr: %r, stdout: %r", retcode, err, out)
+                    logging.error(
+                        "Converting daa failed: returned %s, stderr: %r, stdout: %r",
+                        retcode,
+                        err,
+                        out,
+                    )
 
-                with open("input.out", 'r') as fh:
+                with open("input.out", "r") as fh:
                     blastoutput = fh.read()
 
-                write_raw_clusterblastoutput(options.full_outputfolder_path, blastoutput)
+                write_raw_clusterblastoutput(
+                    options.full_outputfolder_path, blastoutput
+                )
                 logging.info("   DIAMOND search finished. Parsing results...")
                 minseqcoverage = 10
                 minpercidentity = 30
-                blastdict, querylist, hitclusters = parse_blast(blastoutput, seq_record, minseqcoverage, minpercidentity)
+                blastdict, querylist, hitclusters = parse_blast(
+                    blastoutput, seq_record, minseqcoverage, minpercidentity
+                )
                 querylist = remove_queries_without_hits(querylist, blastdict)
-                allcoregenes = [utils.get_gene_acc(cds) for cds in utils.get_secmet_cds_features(seq_record)]
-                rankedclusters, rankedclustervalues, hitclusterdict, hitclusterdata = score_clusterblast_output(blastdict, querylist, hitclusters, clusters, allcoregenes)
+                allcoregenes = [
+                    utils.get_gene_acc(cds)
+                    for cds in utils.get_secmet_cds_features(seq_record)
+                ]
+                (
+                    rankedclusters,
+                    rankedclustervalues,
+                    hitclusterdict,
+                    hitclusterdata,
+                ) = score_clusterblast_output(
+                    blastdict, querylist, hitclusters, clusters, allcoregenes
+                )
 
                 # store all clusterblast related data in a utils.Storage object
                 clusterblastStorage = utils.Storage()
@@ -718,6 +1080,5 @@ def perform_clusterblast(options, seq_record, clusters, proteinlocations, protei
                 clusterblastStorage.proteinannotations = proteinannotations
                 clusterblastStorage.proteinstrands = proteinstrands
 
-
-                #write_clusterblast_output(options, seq_record, clusternumber, queryclusterprots, clusters, hitclusterdata, rankedclusters, rankedclustervalues, proteintags, proteinlocations, proteinannotations, proteinstrands)
+                # write_clusterblast_output(options, seq_record, clusternumber, queryclusterprots, clusters, hitclusterdata, rankedclusters, rankedclustervalues, proteintags, proteinlocations, proteinannotations, proteinstrands)
                 write_clusterblast_output(options, seq_record, clusterblastStorage)

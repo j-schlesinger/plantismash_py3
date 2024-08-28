@@ -7,14 +7,21 @@ from minimock import Mock, mock, restore, TraceTracker, assert_same_trace
 import antismash.specific_modules.lantipeptides
 from antismash.specific_modules.lantipeptides import check_prereqs
 
+
 class TestCheckPrereqs(unittest2.TestCase):
     def setUp(self):
         self.maxDiff = None
         self.tt = TraceTracker()
-        self.locate_exe = Mock('antismash.utils.locate_executable',
-                               tracker=self.tt, returns="/fake/path/to/binary")
-        mock('antismash.utils.locate_executable',
-             mock_obj=self.locate_exe, tracker=self.tt)
+        self.locate_exe = Mock(
+            "antismash.utils.locate_executable",
+            tracker=self.tt,
+            returns="/fake/path/to/binary",
+        )
+        mock(
+            "antismash.utils.locate_executable",
+            mock_obj=self.locate_exe,
+            tracker=self.tt,
+        )
 
     def tearDown(self):
         restore()

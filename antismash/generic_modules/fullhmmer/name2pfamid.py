@@ -11910,5 +11910,5 @@ name_to_pfamid = {
     "DUF3069": "PF11269",
     "GTP1_OBG": "PF01018",
     "DASH_Dad1": "PF08649",
-    "3HBOH": "PF10605"
+    "3HBOH": "PF10605",
 }

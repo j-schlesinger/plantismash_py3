@@ -21,12 +21,15 @@ name = "ecpredictor"
 short_description = name.capitalize()
 priority = 10000
 
+
 def run(seq_record, options):
-    logging.debug('Predicting EC numbers')
-    ecpred_plugins = list(straight.plugin.load('antismash.generic_modules.ecpredictor'))
-    
-    logging.debug('ECpredictor: Found plugins: %s' % ", ".join([plugin.short_description for plugin in ecpred_plugins]))
-    
+    logging.debug("Predicting EC numbers")
+    ecpred_plugins = list(straight.plugin.load("antismash.generic_modules.ecpredictor"))
+
+    logging.debug(
+        "ECpredictor: Found plugins: %s"
+        % ", ".join([plugin.short_description for plugin in ecpred_plugins])
+    )
+
     for ecpred_plugin in ecpred_plugins:
         ecpred_plugin.getECs(seq_record, options)
-    

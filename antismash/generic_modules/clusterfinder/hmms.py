@@ -12,12 +12,13 @@
 from numpy import array, zeros, ones, hstack, float64, int32, power, sum, size, abs, log
 import copy
 
-BIG = 1.e20
-BIGI = 1./BIG
-STEP = 0.
+BIG = 1.0e20
+BIGI = 1.0 / BIG
+STEP = 0.0
 
-def forward_backward(A,B,start_p,observations,DICT,method='BF'):
-    '''
+
+def forward_backward(A, B, start_p, observations, DICT, method="BF"):
+    """
     mstat, nobs, ksym ... numbers of states obervations, and symbols (different domains)
     alpha, beta, pstate ... matrices:
         The observable symbol probability
@@ -39,152 +40,174 @@ def forward_backward(A,B,start_p,observations,DICT,method='BF'):
                             [L->F, L->L]])                     [L1, L2, L3, L4, L5, L6]])
     DICT is a dictionary of alphabates and B array indexes.
 
-    '''
+    """
     DICT_copy = copy.deepcopy(DICT)
-    global BIG,BIGI
-    mstat, nobs, ksym = len(A), len(observations),len(B[0,:])
-    #obervations = array([1,2,3,2,4,6,2,])
-    alpha = zeros((nobs+1,mstat),dtype=float64())
+    global BIG, BIGI
+    mstat, nobs, ksym = len(A), len(observations), len(B[0, :])
+    # obervations = array([1,2,3,2,4,6,2,])
+    alpha = zeros((nobs + 1, mstat), dtype=float64())
 
-               ### FORWARD ALGORITHM ###
-    for i in xrange(mstat):
+    ### FORWARD ALGORITHM ###
+    for i in range(mstat):
         try:
             alpha[0][i] = B[i][DICT[observations[0]]]
         except KeyError:
-            alpha[0][i] = 1.
+            alpha[0][i] = 1.0
             DICT_copy[observations[0]] = ksym
-            B = hstack((B,[[1./ksym],[1./ksym]]))
+            B = hstack((B, [[1.0 / ksym], [1.0 / ksym]]))
             ksym += 1
     arnrm = [0]
-    for t in xrange(1,nobs):
-        asum = 0.
-        for j in xrange(mstat):
+    for t in range(1, nobs):
+        asum = 0.0
+        for j in range(mstat):
             sum = 0
-            for i in xrange(mstat):
+            for i in range(mstat):
                 try:
-                    sum += alpha[t-1][i]*A[i][j]*B[j][DICT[observations[t]]]
+                    sum += alpha[t - 1][i] * A[i][j] * B[j][DICT[observations[t]]]
                 except KeyError:
-                    '''
+                    """
                     Since PFAM domain doesn't exist in neither DICT or B, we will create room for it.
                     Since we don't have good aproximation of what its frequency should be, we will
                     ignore it at calculation of <sum>, but the frequency for better guess at another cycle
                     of Baum-Welch is set to frequency of a single domain set of all of the domains.
-                    '''
-                    sum += alpha[t-1][i]*A[i][j]*1.
+                    """
+                    sum += alpha[t - 1][i] * A[i][j] * 1.0
                     DICT_copy[observations[t]] = ksym
-                    B = hstack((B,[[1./ksym],[1./ksym]]))
+                    B = hstack((B, [[1.0 / ksym], [1.0 / ksym]]))
                     ksym += 1
             alpha[t][j] = sum
             asum += sum
 
         arnrm.append(arnrm[-1])
-        if asum < BIGI:                # normalization to avoid float underflow
+        if asum < BIGI:  # normalization to avoid float underflow
             arnrm[-1] += 1
-            for j in xrange(mstat):
+            for j in range(mstat):
                 alpha[t][j] *= BIG
 
     arnrm = array(arnrm)
-    #alpha = alpha[1:,:] # cut off start_p vector
+    # alpha = alpha[1:,:] # cut off start_p vector
 
-
-                   ### BACKWARD ALGORITHM ###
-    beta = zeros((nobs,mstat),dtype=float64())   # initialization
-    beta[-1] = ones((1,2),dtype=float64())
-    brnrm = zeros(nobs,dtype=int32())        # begin passages
-    for t in xrange(nobs-2,-1,-1):
-        bsum = 0.
-        for i in xrange(mstat):
-            sum = 0.
-            for j in xrange(mstat):
+    ### BACKWARD ALGORITHM ###
+    beta = zeros((nobs, mstat), dtype=float64())  # initialization
+    beta[-1] = ones((1, 2), dtype=float64())
+    brnrm = zeros(nobs, dtype=int32())  # begin passages
+    for t in range(nobs - 2, -1, -1):
+        bsum = 0.0
+        for i in range(mstat):
+            sum = 0.0
+            for j in range(mstat):
                 try:
-                    sum += A[i][j]*B[j][DICT[observations[t+1]]]*beta[t+1][j]
-                except KeyError: sum += A[i][j]*1.*beta[t+1][j]
+                    sum += A[i][j] * B[j][DICT[observations[t + 1]]] * beta[t + 1][j]
+                except KeyError:
+                    sum += A[i][j] * 1.0 * beta[t + 1][j]
             beta[t][i] = sum
             bsum += sum
 
-        brnrm[t] = brnrm[t+1]
+        brnrm[t] = brnrm[t + 1]
         if bsum < BIGI:
             brnrm[t] += 1
-            for j in xrange(mstat):
+            for j in range(mstat):
                 beta[t][j] *= BIG
 
                 ### CALCULATE LIKELIHOOD ###
-    lhood = 0.                            # overall likelihood
-    for i in xrange(mstat):
-        lhood += alpha[0][i]*beta[0][i]
+    lhood = 0.0  # overall likelihood
+    for i in range(mstat):
+        lhood += alpha[0][i] * beta[0][i]
     lrnrm = arnrm[0] + brnrm[0]
-    while lhood < BIGI:                  # again, to avoid overflow problem
+    while lhood < BIGI:  # again, to avoid overflow problem
         lhood *= BIG
         lrnrm += 1
 
-    pstate = zeros((nobs,mstat),dtype=float64())
-    for t in xrange(nobs):
-        sum = 0.
-        for i in xrange(mstat):
-            pstate[t][i] = alpha[t][i]*beta[t][i]
+    pstate = zeros((nobs, mstat), dtype=float64())
+    for t in range(nobs):
+        sum = 0.0
+        for i in range(mstat):
+            pstate[t][i] = alpha[t][i] * beta[t][i]
             sum += pstate[t][i]
-        for i in xrange(mstat):
+        for i in range(mstat):
             pstate[t][i] /= sum
 
-    if method == 'BF':
-        return pstate[:,0]
-    elif method == 'BW':
-        return baum_welch(A,B,start_p,alpha,beta,arnrm,brnrm,lrnrm,lhood,observations,DICT_copy)
+    if method == "BF":
+        return pstate[:, 0]
+    elif method == "BW":
+        return baum_welch(
+            A,
+            B,
+            start_p,
+            alpha,
+            beta,
+            arnrm,
+            brnrm,
+            lrnrm,
+            lhood,
+            observations,
+            DICT_copy,
+        )
 
 
-def baum_welch(A,B,start_p,alpha,beta,arnrm,brnrm,lrnrm,lhood,observations,DICT):
-    '''
+def baum_welch(
+    A, B, start_p, alpha, beta, arnrm, brnrm, lrnrm, lhood, observations, DICT
+):
+    """
     Baum-Welch procedure
-    '''
-    global STEP,BIGI
+    """
+    global STEP, BIGI
 
     olda = copy.deepcopy(A)
     oldb = copy.deepcopy(B)
     oldstart_p = copy.deepcopy(start_p)
-    mstat, nobs, ksym = len(A), len(observations),len(B[0,:])
-    bnew = zeros((mstat,ksym),dtype=float64())
+    mstat, nobs, ksym = len(A), len(observations), len(B[0, :])
+    bnew = zeros((mstat, ksym), dtype=float64())
 
-    powtab = ones((10),dtype=float64())
-    for i in xrange(len(powtab)):
-        powtab[i] = power(BIGI,i-6)
-    for i in xrange(mstat):
-        denom = 0.
-        for t in xrange(nobs):
-            term = (alpha[t][i]*beta[t][i]/lhood)*powtab[arnrm[t] + brnrm[t] - lrnrm + 6]
+    powtab = ones((10), dtype=float64())
+    for i in range(len(powtab)):
+        powtab[i] = power(BIGI, i - 6)
+    for i in range(mstat):
+        denom = 0.0
+        for t in range(nobs):
+            term = (alpha[t][i] * beta[t][i] / lhood) * powtab[
+                arnrm[t] + brnrm[t] - lrnrm + 6
+            ]
             denom += term
             bnew[i][DICT[observations[t]]] += term
-        for j in xrange(mstat):
-            num = 0.
-            for t in xrange(nobs-1):
-                num += alpha[t][i]*B[j][DICT[observations[t+1]]]*beta[t+1][j]*powtab[arnrm[t] + brnrm[t+1] - lrnrm + 6]/lhood
-            A[i][j] *= (num/denom)
-        for k in xrange(ksym):
+        for j in range(mstat):
+            num = 0.0
+            for t in range(nobs - 1):
+                num += (
+                    alpha[t][i]
+                    * B[j][DICT[observations[t + 1]]]
+                    * beta[t + 1][j]
+                    * powtab[arnrm[t] + brnrm[t + 1] - lrnrm + 6]
+                    / lhood
+                )
+            A[i][j] *= num / denom
+        for k in range(ksym):
             bnew[i][k] /= denom
-        start_p[i] = denom/nobs   # new way to calculate prior probabilities
+        start_p[i] = denom / nobs  # new way to calculate prior probabilities
     B = bnew
 
     # calculate mean of changes in A,B, and start_p together
-    meana = sum(abs(A-olda)) / size(A)
-    meanb = sum(abs(B-oldb)) / size(B)
-    meanstart_p = sum(abs(start_p-oldstart_p)) / size(start_p)
+    meana = sum(abs(A - olda)) / size(A)
+    meanb = sum(abs(B - oldb)) / size(B)
+    meanstart_p = sum(abs(start_p - oldstart_p)) / size(start_p)
     mean = (meana + meanb + meanstart_p) / 3
     STEP += 1
-    #print STEP,mean
-    #print A
-    #print B
-    #print start_p
-    #print
+    # print STEP,mean
+    # print A
+    # print B
+    # print start_p
+    # print
     #
     # termination test: if steps >= x or deltas <= y: return pstate
-    print 'STEP: %i mean: %.9f' % (STEP,mean)
+    print("STEP: %i mean: %.9f" % (STEP, mean))
     if mean < 1e-6 or STEP == 100:
-        return forward_backward(A,B,start_p,observations,DICT,method='BF')
+        return forward_backward(A, B, start_p, observations, DICT, method="BF")
     else:
-        return forward_backward(A,B,start_p,observations,DICT,method='BW')
+        return forward_backward(A, B, start_p, observations, DICT, method="BW")
 
 
-def viterbi(A,B,start_p,observations,DICT):
-    '''
+def viterbi(A, B, start_p, observations, DICT):
+    """
     Calculate the most probable path, and return it!
     WARNING: Not well tested!
 
@@ -209,39 +232,39 @@ def viterbi(A,B,start_p,observations,DICT):
            A = array([[F->F, F->L],     B = array([[F1, F2, F3, F4, F5, F6],    start_p =array([0.6, 0.4])
                             [L->F, L->L]])                     [L1, L2, L3, L4, L5, L6]])
     DICT is a dictionary of alphabates and B array indexes.
-    '''
+    """
 
-    mstat, nobs, ksym = len(A), len(observations),len(B[0,:])
+    mstat, nobs, ksym = len(A), len(observations), len(B[0, :])
     T = {}
 
-    for m in xrange(mstat):
-        T[m] = (log(start_p[m]),[m],start_p[m])
-    for t in xrange(0,nobs):
+    for m in range(mstat):
+        T[m] = (log(start_p[m]), [m], start_p[m])
+    for t in range(0, nobs):
         U = {}
-        for j in xrange(mstat):
+        for j in range(mstat):
             total = 0
             valmax = None
             argmax = None
-            for i in xrange(mstat):
-                (prob,v_path,v_prob) = T[i]
+            for i in range(mstat):
+                (prob, v_path, v_prob) = T[i]
                 try:
-                    p = log(A[i][j]*B[j][DICT[observations[t]]])
+                    p = log(A[i][j] * B[j][DICT[observations[t]]])
                 except KeyError:
-                    p = log(A[i][j]*1.)
+                    p = log(A[i][j] * 1.0)
                 prob += p
                 v_prob += p
                 total += prob
                 if v_prob > valmax:
                     argmax = v_path + [j]
                     valmax = v_prob
-            U[j] = (total,argmax,valmax)
-        T =  U
+            U[j] = (total, argmax, valmax)
+        T = U
 
     ## apply sum/max to the final states:
-    total = 0.
+    total = 0.0
     argmax = None
     valmax = None
-    for t in xrange(mstat):
+    for t in range(mstat):
         (prob, v_path, v_prob) = T[t]
         total += prob
         if v_prob > valmax:
@@ -250,9 +273,8 @@ def viterbi(A,B,start_p,observations,DICT):
     return argmax[:-1]
 
 
-
 ### TEST ###
-'''
+"""
 A = array([[0.80,0.20],
                  [0.4,0.6]])
 B = array([[1., 1./6, 1./6, 1./6, 1./6, 1./6],
@@ -275,4 +297,4 @@ for i in xrange(len(REAL)-1):
 #PRED = forward_backward(A,B,start_p,observations,DICT,method='BW')
 PRED = viterbi(A,B,start_p,observations,DICT)
 print PRED
-'''
+"""
