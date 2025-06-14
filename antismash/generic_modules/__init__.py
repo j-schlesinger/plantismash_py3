@@ -1,47 +1,40 @@
-class Signature(object):
-    """Secondary metabolite signature"""
-    def __init__(self, name, _type, description, cutoff, path):
-        self.name = name
-        self.type = _type
-        self.description = description
-        self.cutoff = cutoff
-        self.path = path
-
 from antismash.generic_modules import (
-        fullhmmer,
-#        fullhmmer_dblookup,
-        genefinding,
-        hmm_detection,
-        clusterblast,
-        subclusterblast,
-        knownclusterblast,
-        smcogs,
-        coexpress,
-        gff_parser,
-    )
+    fullhmmer,
+    #        fullhmmer_dblookup,
+    genefinding,
+    hmm_detection,
+    clusterblast,
+    subclusterblast,
+    knownclusterblast,
+    smcogs,
+    coexpress,
+    gff_parser,
+)
+
 
 def check_prereqs(options):
     failure_msgs = []
+    doptions = vars(options)
 
-    if options.full_hmmer or options.inclusive:
+    if doptions.get("full_hmmer", False) or doptions.get("inclusive", False):
         failure_msgs.extend(fullhmmer.check_prereqs(options))
 
     failure_msgs.extend(genefinding.check_prereqs(options))
     failure_msgs.extend(hmm_detection.check_prereqs())
 
-    if options.smcogs:
+    if doptions.get("smcogs", False):
         failure_msgs.extend(smcogs.check_prereqs(options))
 
-    if options.clusterblast:
+    if doptions.get("clusterblast", False):
         failure_msgs.extend(clusterblast.check_prereqs(options))
 
-    if options.subclusterblast:
+    if doptions.get("subclusterblast", False):
         failure_msgs.extend(subclusterblast.check_prereqs(options))
 
-    if options.knownclusterblast:
+    if doptions.get("knownclusterblast", False):
         failure_msgs.extend(knownclusterblast.check_prereqs(options))
 
-    if options.coexpress:
+    if doptions.get("coexpress", False):
         failure_msgs.extend(coexpress.check_prereqs(options))
 
     return failure_msgs

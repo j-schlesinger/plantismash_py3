@@ -18,9 +18,8 @@
 # This directory contains modules that are executed in genome-wide context
 
 
-from antismash.generic_genome_modules import (
-       metabolicmodel
-    )
+from antismash.generic_genome_modules import metabolicmodel
+
 
 def check_prereqs(options):
     failure_msgs = []

@@ -26,6 +26,7 @@ from antismash import utils
 
 try:
     from antismash.generic_genome_modules.metabolicmodel.automodel import run_automodel
+
     libImport = True
 except (ImportError, ImportWarning):
     libImport = False
@@ -40,7 +41,7 @@ def check_prereqs():
 
     # Tuple is ( binary_name, optional)
     _required_binaries = [
-        ('blastp', False),
+        ("blastp", False),
     ]
 
     failure_messages = []
@@ -51,16 +52,17 @@ def check_prereqs():
 
     try:
         import cobra
+
         logging.debug("Found cobra version %s", cobra.__version__)
     except (ImportError, ImportWarning) as err:
         failure_messages.append(str(err))
 
     try:
         import libsbml
+
         logging.debug("Found libsmbl version %s", libsbml.getLibSBMLVersion())
     except (ImportError, ImportWarning) as err:
         failure_messages.append(str(err))
-
 
     if not libImport:
         failure_messages.append("Failed to import automodel")
@@ -73,7 +75,6 @@ def run_analyses(seq_record, options):
 
     if options.modeling == "none":
         return False
-
 
     model_dirname = "metabolicModel"
 
